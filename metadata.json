@@ -1,0 +1,7 @@
+{
+  "name": "LifeFlow AI - Smart Blood Bank",
+  "description": "An AI-powered blood donation platform featuring real-time matching, inventory tracking, and an intelligent chatbot for donor eligibility.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
