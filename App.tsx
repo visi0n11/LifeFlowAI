@@ -46,15 +46,15 @@ const recipientCompatibility: Record<string, string[]> = {
 
 // --- Initial Mock Data (Reflecting Requested Demo Users) ---
 const initialDonors: Donor[] = [
-  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "987-0101", lastDonation: "2024-02-15" },
-  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "987-0102", lastDonation: "2024-03-01" },
-  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "987-0103", lastDonation: "2024-01-20" },
-  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "987-0104", lastDonation: "2024-03-10" },
+  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", lastDonation: "2024-02-15" },
+  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", lastDonation: "2024-03-01" },
+  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", lastDonation: "2024-01-20" },
+  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", lastDonation: "2024-03-10" },
 ];
 
 const initialRecipients: Recipient[] = [
-  { id: 1, name: "Sahil Mane", age: 29, bloodType: "O+", contact: "555-0201", condition: "Surgery Recovery" },
-  { id: 2, name: "Priya Patil", age: 34, bloodType: "AB+", contact: "555-0202", condition: "Anemia Treatment" },
+  { id: 1, name: "Sahil Mane", age: 29, bloodType: "O+", contact: "9988776655", condition: "Surgery Recovery" },
+  { id: 2, name: "Priya Patil", age: 34, bloodType: "AB+", contact: "9988776644", condition: "Anemia Treatment" },
 ];
 
 const initialBags: BloodBag[] = [
@@ -185,6 +185,10 @@ const App: React.FC = () => {
 
   const handleAddDonor = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (newDonor.contact.length !== 10) {
+      showToast('Contact number must be exactly 10 digits', 'info');
+      return;
+    }
     setIsSaving(true);
     await new Promise(resolve => setTimeout(resolve, 800));
     const donor: Donor = {
@@ -615,13 +619,20 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Contact No.</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Contact No. (10 digits)</label>
                 <input 
                   type="text" required
+                  maxLength={10}
+                  pattern="[0-9]{10}"
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 transition-all"
-                  placeholder="555-XXXX"
+                  placeholder="Enter 10 digit number"
                   value={newDonor.contact}
-                  onChange={e => setNewDonor({...newDonor, contact: e.target.value})}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    if (val.length <= 10) {
+                      setNewDonor({...newDonor, contact: val});
+                    }
+                  }}
                   disabled={isSaving}
                 />
               </div>
