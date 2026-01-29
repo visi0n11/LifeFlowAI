@@ -119,15 +119,7 @@ export const getAIChatResponse = async (userMessage: string) => {
 
   // 2. Check for internet connectivity
   if (!navigator.onLine) {
-    return "I'm currently offline, but I can still assist you! I've been pre-loaded with over 100 responses to help with: \n\n" +
-           "• Eligibility Requirements (age, weight, height)\n" +
-           "• Donation Rules & Frequency (whole blood, platelets, etc.)\n" +
-           "• Blood Types & Compatibility\n" +
-           "• Medications & Health Conditions\n" +
-           "• Travel Deferrals\n" +
-           "• Post-Donation Care\n" +
-           "• Team Info (Vaghu, Aayan, Akash, Shreyash)\n\n" +
-           "How can I help you save a life today?";
+    return "I'm currently offline. I can still answer questions about eligibility, donation rules, blood types, medications, and team info (Vaghu, Aayan, Akash, Shreyash). How can I help?";
   }
 
   // 3. Fallback to Gemini AI
