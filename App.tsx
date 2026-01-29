@@ -24,12 +24,17 @@ import {
   ShieldCheck,
   Globe,
   LogIn,
-  Lock
+  Lock,
+  Gift,
+  Coffee,
+  Shirt,
+  DollarSign,
+  TrendingUp
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Auth } from './components/Auth';
 import { getAIChatResponse } from './services/geminiService';
-import { User, Donor, Recipient, BloodBag, BloodType } from './types';
+import { User, Donor, Recipient, BloodBag, BloodType, ResourceDonation, ResourceType } from './types';
 
 // --- Constants ---
 const COLORS = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6'];
@@ -46,7 +51,7 @@ const recipientCompatibility: Record<string, string[]> = {
     "AB+": ["AB+", "AB-", "A+", "A-", "B+", "B-", "O+", "O-"]
 };
 
-// --- Initial Mock Data (Reflecting Requested Demo Users) ---
+// --- Initial Mock Data ---
 const initialDonors: Donor[] = [
   { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", lastDonation: "2024-02-15" },
   { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", lastDonation: "2024-03-01" },
@@ -63,6 +68,12 @@ const initialBags: BloodBag[] = [
   { id: 1, type: "O+", volume: "450ml", donationDate: "2024-03-12", expiryDate: "2024-04-23" },
   { id: 2, type: "B-", volume: "450ml", donationDate: "2024-03-05", expiryDate: "2024-04-16" },
   { id: 3, type: "AB+", volume: "450ml", donationDate: "2024-01-25", expiryDate: "2024-03-08" },
+];
+
+const initialResourceDonations: ResourceDonation[] = [
+  { id: 1, type: 'food', donorName: 'Akash', details: '10kg Rice', date: '2024-03-15' },
+  { id: 2, type: 'money', donorName: 'Vaghu', details: '₹1500', date: '2024-03-14' },
+  { id: 3, type: 'clothes', donorName: 'Aayan', details: '5 Pairs of Trousers', date: '2024-03-10' },
 ];
 
 const App: React.FC = () => {
@@ -106,35 +117,35 @@ const App: React.FC = () => {
     }
   });
 
+  const [resourceDonations, setResourceDonations] = useState<ResourceDonation[]>(() => {
+    try {
+      const saved = localStorage.getItem('lifeflow_resources');
+      return saved ? JSON.parse(saved) : initialResourceDonations;
+    } catch (e) {
+      return initialResourceDonations;
+    }
+  });
+
   const [matchResult, setMatchResult] = useState<Donor | null>(null);
   const [isDonorModalOpen, setIsDonorModalOpen] = useState(false);
   const [isBagModalOpen, setIsBagModalOpen] = useState(false);
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '' });
   const [newRequest, setNewRequest] = useState({ name: '', bloodType: '' as BloodType | '', condition: '' });
   const [newBag, setNewBag] = useState({ type: 'A+' as BloodType, volume: '450ml' });
+  const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
 
   useEffect(() => {
     localStorage.setItem('lifeflow_donors', JSON.stringify(donors));
-    setDbStatus('syncing');
-    const timer = setTimeout(() => setDbStatus('connected'), 600);
-    return () => clearTimeout(timer);
-  }, [donors]);
-
-  useEffect(() => {
     localStorage.setItem('lifeflow_recipients', JSON.stringify(recipients));
-    setDbStatus('syncing');
-    const timer = setTimeout(() => setDbStatus('connected'), 600);
-    return () => clearTimeout(timer);
-  }, [recipients]);
-
-  useEffect(() => {
     localStorage.setItem('lifeflow_bags', JSON.stringify(bags));
+    localStorage.setItem('lifeflow_resources', JSON.stringify(resourceDonations));
     setDbStatus('syncing');
     const timer = setTimeout(() => setDbStatus('connected'), 600);
     return () => clearTimeout(timer);
-  }, [bags]);
+  }, [donors, recipients, bags, resourceDonations]);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('lifeflow_session');
@@ -255,6 +266,25 @@ const App: React.FC = () => {
     showToast(`Blood bag ${bag.type} added to inventory`);
   };
 
+  const handleAddResourceDonation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newResource.details || !newResource.donorName) return;
+    setIsSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const donation: ResourceDonation = {
+      id: Date.now(),
+      type: newResource.type,
+      donorName: newResource.donorName,
+      details: newResource.details,
+      date: new Date().toISOString().split('T')[0]
+    };
+    setResourceDonations(prev => [donation, ...prev]);
+    setIsResourceModalOpen(false);
+    setIsSaving(false);
+    showToast(`Thank you for your ${donation.type} donation, ${donation.donorName}!`);
+    setNewResource({ type: 'food', details: '', donorName: currentUser?.name || '' });
+  };
+
   const handleDispatchBag = (id: number) => {
     const bag = bags.find(b => b.id === id);
     if (!bag) return;
@@ -284,8 +314,17 @@ const App: React.FC = () => {
     { id: 'donors', label: 'Donors', icon: Users },
     { id: 'recipients', label: 'Recipients', icon: Activity },
     { id: 'bloodbags', label: 'Inventory', icon: Droplet },
+    { id: 'community', label: 'Community', icon: Gift },
     { id: 'dashboard', label: 'Analytics', icon: Activity },
   ];
+
+  const getResourceIcon = (type: ResourceType) => {
+    switch(type) {
+      case 'food': return <Coffee className="w-4 h-4" />;
+      case 'clothes': return <Shirt className="w-4 h-4" />;
+      case 'money': return <DollarSign className="w-4 h-4" />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -399,17 +438,17 @@ const App: React.FC = () => {
                 Become a Donor
               </button>
               <button 
-                onClick={() => setActiveTab('bloodbags')} 
+                onClick={() => setActiveTab('community')} 
                 className="px-10 py-4 bg-white border border-slate-200 text-slate-800 font-bold rounded-xl hover:bg-slate-50 transition-all"
               >
-                Check Availability
+                Share Resources
               </button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 text-left">
               {[
                 { title: "Real-time Matching", desc: "Our AI cluster instantly connects donors with patients based on compatible blood groups.", icon: Activity },
-                { title: "Smart Inventory", desc: "Live tracking of blood bags with expiry alerts and automated volume management.", icon: Droplet },
+                { title: "Community Hub", desc: "Go beyond blood by donating food, clothes, or funds to those in need.", icon: Gift },
                 { title: "Helper AI", desc: "Ask our assistant anything about eligibility, health rules, and compatibility.", icon: MessageSquare }
               ].map((feature, i) => (
                 <div key={i} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
@@ -466,6 +505,105 @@ const App: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'community' && (
+          <div className="space-y-8 animate-fade-in">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800">Community Care Hub</h2>
+                <p className="text-slate-500 text-sm mt-1">Share food, clothes, and financial support with the network.</p>
+              </div>
+              <button 
+                onClick={() => {
+                  setNewResource({ type: 'food', details: '', donorName: currentUser?.name || '' });
+                  setIsResourceModalOpen(true);
+                }} 
+                className="bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-red-700 flex items-center space-x-2 shadow-lg shadow-red-100"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Share Resources</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { type: 'food', label: 'Food Donated', icon: Coffee, color: 'text-orange-600', bg: 'bg-orange-50' },
+                { type: 'clothes', label: 'Clothes Shared', icon: Shirt, color: 'text-blue-600', bg: 'bg-blue-50' },
+                { type: 'money', label: 'Funds Raised', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50' },
+              ].map((stat, i) => (
+                <div key={i} className={`${stat.bg} p-6 rounded-3xl border border-white shadow-sm flex items-center justify-between`}>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                    <p className={`text-2xl font-black ${stat.color}`}>
+                      {resourceDonations.filter(d => d.type === stat.type).length} Units
+                    </p>
+                  </div>
+                  <div className={`p-4 rounded-2xl bg-white shadow-sm ${stat.color}`}>
+                    <stat.icon className="w-6 h-6" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center space-x-2">
+                    <TrendingUp className="w-4 h-4 text-red-600" />
+                    <span>Recent Contributions</span>
+                  </h3>
+                </div>
+                <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
+                  {resourceDonations.map(d => (
+                    <div key={d.id} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center space-x-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          d.type === 'food' ? 'bg-orange-100 text-orange-600' : 
+                          d.type === 'clothes' ? 'bg-blue-100 text-blue-600' : 
+                          'bg-green-100 text-green-600'
+                        }`}>
+                          {getResourceIcon(d.type)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800">{d.details}</p>
+                          <p className="text-[10px] text-slate-400 uppercase font-black">By {d.donorName} • {d.date}</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">Verified</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 -mr-16 -mt-16 rounded-full blur-3xl"></div>
+                  <h3 className="text-xl font-bold mb-4">Why donate resources?</h3>
+                  <ul className="space-y-4 text-sm text-slate-400">
+                    <li className="flex items-start space-x-3">
+                      <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center shrink-0 mt-0.5"><CheckCircle className="w-3 h-3 text-red-500" /></div>
+                      <span><strong>Food:</strong> Direct support for recovery patients who need balanced nutrition but lack resources.</span>
+                    </li>
+                    <li className="flex items-start space-x-3">
+                      <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center shrink-0 mt-0.5"><CheckCircle className="w-3 h-3 text-red-500" /></div>
+                      <span><strong>Clothes:</strong> Provide warmth and dignity to long-term hospital residents and their families.</span>
+                    </li>
+                    <li className="flex items-start space-x-3">
+                      <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center shrink-0 mt-0.5"><CheckCircle className="w-3 h-3 text-red-500" /></div>
+                      <span><strong>Money:</strong> Funds are used for emergency medical kits and maintaining the Atlas cloud cluster.</span>
+                    </li>
+                  </ul>
+                  <button 
+                    onClick={() => setIsResourceModalOpen(true)}
+                    className="mt-8 w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] hover:bg-red-700 transition-all shadow-xl shadow-red-900/20"
+                  >
+                    Start a New Donation
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -733,6 +871,62 @@ const App: React.FC = () => {
                 </div>
                 <button type="submit" className="w-full py-3.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all">
                   Register Bag Unit
+                </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isResourceModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl animate-fade-in overflow-hidden border border-slate-200">
+             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800">New Community Donation</h3>
+              <button onClick={() => setIsResourceModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X /></button>
+            </div>
+            <form onSubmit={handleAddResourceDonation} className="p-6 space-y-4">
+               <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Donor Identity</label>
+                  <input 
+                    type="text" required
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-red-500/10 outline-none transition-all"
+                    placeholder="Your Name"
+                    value={newResource.donorName}
+                    onChange={e => setNewResource({...newResource, donorName: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Donation Type</label>
+                    <select 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-red-500/10 outline-none cursor-pointer"
+                      value={newResource.type}
+                      onChange={e => setNewResource({...newResource, type: e.target.value as ResourceType})}
+                    >
+                      <option value="food">Food</option>
+                      <option value="clothes">Clothes</option>
+                      <option value="money">Money</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Details</label>
+                    <input 
+                      type="text" required
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-red-500/10 outline-none"
+                      placeholder={newResource.type === 'money' ? 'Amount (e.g. ₹500)' : 'Qty/Desc'}
+                      value={newResource.details}
+                      onChange={e => setNewResource({...newResource, details: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-200 text-center">
+                  <p className="text-[10px] text-slate-500 leading-relaxed italic">
+                    By submitting, you agree to drop off items at our partner collection centers or complete the digital payment transfer.
+                  </p>
+                </div>
+                <button type="submit" disabled={isSaving} className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-100 flex items-center justify-center space-x-3">
+                   {isSaving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Gift className="w-5 h-5" />}
+                   <span className="uppercase text-xs tracking-widest">{isSaving ? 'Processing...' : 'Complete Donation'}</span>
                 </button>
             </form>
           </div>

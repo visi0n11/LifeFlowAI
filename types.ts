@@ -34,3 +34,13 @@ export interface BloodBag {
   donationDate: string;
   expiryDate: string;
 }
+
+export type ResourceType = 'food' | 'clothes' | 'money';
+
+export interface ResourceDonation {
+  id: number;
+  type: ResourceType;
+  donorName: string;
+  details: string; // e.g., "5kg Rice", "10 Shirts", "$50"
+  date: string;
+}
