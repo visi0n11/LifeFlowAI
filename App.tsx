@@ -34,12 +34,15 @@ import {
   ChevronDown,
   History,
   BookOpen,
-  Filter
+  Filter,
+  AlertTriangle,
+  Clock,
+  Settings
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Auth } from './components/Auth';
 import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
-import { User, Donor, Recipient, BloodBag, BloodType, ResourceDonation, ResourceType } from './types';
+import { User, Donor, Recipient, BloodBag, BloodType, ResourceDonation, ResourceType, AppNotification, NotificationSettings } from './types';
 
 // --- Constants ---
 const COLORS = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6'];
@@ -86,6 +89,7 @@ const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<{text: string, sender: 'user' | 'bot'}[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatSearchQuery, setChatSearchQuery] = useState("");
@@ -95,9 +99,26 @@ const App: React.FC = () => {
   const [isSyncingExternally, setIsSyncingExternally] = useState(false);
   
   const chatRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatToggleRef = useRef<HTMLButtonElement>(null);
-  const [notification, setNotification] = useState<{message: string, type: 'success' | 'info'} | null>(null);
+  const notifToggleRef = useRef<HTMLButtonElement>(null);
+  const [notificationToast, setNotificationToast] = useState<{message: string, type: 'success' | 'info'} | null>(null);
+
+  // --- Notification & Persistence States ---
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    const saved = localStorage.getItem('lifeflow_notifications');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings>(() => {
+    const saved = localStorage.getItem('lifeflow_notif_settings');
+    return saved ? JSON.parse(saved) : {
+      inventoryAlerts: true,
+      matchAlerts: true,
+      systemAlerts: true
+    };
+  });
 
   const [donors, setDonors] = useState<Donor[]>(() => {
     try {
@@ -135,7 +156,7 @@ const App: React.FC = () => {
     }
   });
 
-  // --- Real-time Synchronizer ---
+  // --- Real-time Synchronizer (Cross-Tab) ---
   useEffect(() => {
     const handleStorageUpdate = (e: StorageEvent) => {
       if (!e.newValue) return;
@@ -160,6 +181,9 @@ const App: React.FC = () => {
           setResourceDonations(parsedData);
           updated = true;
           break;
+        case 'lifeflow_notifications':
+          setNotifications(parsedData);
+          break;
         case 'lifeflow_session':
           setCurrentUser(parsedData);
           break;
@@ -169,12 +193,75 @@ const App: React.FC = () => {
         setIsSyncingExternally(true);
         setTimeout(() => setIsSyncingExternally(false), 2000);
         showToast("Directory synced with network update", 'info');
+        
+        if (notifSettings.systemAlerts) {
+          addNotification({
+            title: "Database Update",
+            message: "A teammate has updated the directory. Information refreshed across all clusters.",
+            type: 'system'
+          });
+        }
       }
     };
 
     window.addEventListener('storage', handleStorageUpdate);
     return () => window.removeEventListener('storage', handleStorageUpdate);
-  }, []);
+  }, [notifSettings.systemAlerts]);
+
+  // --- Real-time Logic (Triggers) ---
+  
+  // 1. Critical Inventory Alert
+  useEffect(() => {
+    if (!notifSettings.inventoryAlerts) return;
+    
+    BLOOD_TYPES.forEach(type => {
+      const count = bags.filter(b => b.type === type).length;
+      if (count <= 1) {
+        const title = `Critical Stock: ${type}`;
+        const message = `Blood inventory for group ${type} is dangerously low. Please prioritize ${type} donations.`;
+        
+        // Prevent spam - check if we already have this exact inventory alert unread
+        const existing = notifications.find(n => n.title === title && !n.read);
+        if (!existing) {
+          addNotification({ title, message, type: 'inventory' });
+        }
+      }
+    });
+  }, [bags, notifSettings.inventoryAlerts]);
+
+  // 2. Personal Matching Alert
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'donor' || !notifSettings.matchAlerts) return;
+    
+    const compatibleGroups = recipientCompatibility[currentUser.bloodType!] || [];
+    const urgentMatches = recipients.filter(r => compatibleGroups.includes(r.bloodType));
+    
+    if (urgentMatches.length > 0) {
+      const lastMatch = urgentMatches[0];
+      const title = "Urgent Compatibility Match";
+      const message = `${lastMatch.name} needs ${lastMatch.bloodType}. Your ${currentUser.bloodType} group is a compatible match!`;
+      
+      const existing = notifications.find(n => n.title === title && !n.read);
+      if (!existing) {
+        addNotification({ title, message, type: 'match' });
+      }
+    }
+  }, [recipients, currentUser, notifSettings.matchAlerts]);
+
+  const addNotification = (notif: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
+    const newNotif: AppNotification = {
+      ...notif,
+      id: Math.random().toString(36).substring(2, 9),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      read: false
+    };
+    
+    setNotifications(prev => {
+      const next = [newNotif, ...prev].slice(0, 20); // Keep last 20
+      localStorage.setItem('lifeflow_notifications', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const [sortConfig, setSortConfig] = useState<{ key: keyof Donor; direction: 'asc' | 'desc' } | null>(null);
 
@@ -200,6 +287,10 @@ const App: React.FC = () => {
   }, [donors, recipients, bags, resourceDonations]);
 
   useEffect(() => {
+    localStorage.setItem('lifeflow_notif_settings', JSON.stringify(notifSettings));
+  }, [notifSettings]);
+
+  useEffect(() => {
     const savedUser = localStorage.getItem('lifeflow_session');
     if (savedUser) {
       try { setCurrentUser(JSON.parse(savedUser)); } catch (e) { localStorage.removeItem('lifeflow_session'); }
@@ -217,17 +308,26 @@ const App: React.FC = () => {
       ) {
         setIsChatOpen(false);
       }
+      if (
+        isNotifOpen &&
+        notifRef.current && 
+        !notifRef.current.contains(event.target as Node) &&
+        notifToggleRef.current && 
+        !notifToggleRef.current.contains(event.target as Node)
+      ) {
+        setIsNotifOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isChatOpen]);
+  }, [isChatOpen, isNotifOpen]);
 
   useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => setNotification(null), 3000);
+    if (notificationToast) {
+      const timer = setTimeout(() => setNotificationToast(null), 3000);
       return () => clearTimeout(timer);
     }
-  }, [notification]);
+  }, [notificationToast]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -243,7 +343,7 @@ const App: React.FC = () => {
   };
 
   const showToast = (message: string, type: 'success' | 'info' = 'success') => {
-    setNotification({ message, type });
+    setNotificationToast({ message, type });
   };
 
   const findBestMatch = (bloodType: BloodType) => {
@@ -407,6 +507,19 @@ const App: React.FC = () => {
     setIsTyping(false);
   };
 
+  const markAllRead = () => {
+    setNotifications(prev => {
+      const next = prev.map(n => ({ ...n, read: true }));
+      localStorage.setItem('lifeflow_notifications', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+    localStorage.removeItem('lifeflow_notifications');
+  };
+
   const filteredChatResults = useMemo(() => {
     if (!chatSearchQuery.trim()) return { messages: [], faq: [] };
     const query = chatSearchQuery.toLowerCase();
@@ -428,6 +541,8 @@ const App: React.FC = () => {
     { id: 'community', label: 'Community', icon: Gift },
     { id: 'dashboard', label: 'Analytics', icon: Activity },
   ];
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const getResourceIcon = (type: ResourceType) => {
     switch(type) {
@@ -455,15 +570,15 @@ const App: React.FC = () => {
         />
       )}
 
-      {notification && (
+      {notificationToast && (
         <div className="fixed top-20 right-4 z-[100] animate-fade-in">
           <div className={`px-6 py-4 rounded-2xl shadow-2xl border flex items-center space-x-3 ${
-            notification.type === 'success' 
+            notificationToast.type === 'success' 
               ? 'bg-green-50 border-green-200 text-green-700' 
               : 'bg-blue-50 border-blue-200 text-blue-700'
           }`}>
-            {notification.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
-            <span className="font-bold text-sm">{notification.message}</span>
+            {notificationToast.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+            <span className="font-bold text-sm">{notificationToast.message}</span>
           </div>
         </div>
       )}
@@ -501,6 +616,82 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            <div className="relative">
+              <button 
+                ref={notifToggleRef}
+                onClick={() => {
+                  setIsNotifOpen(!isNotifOpen);
+                  if (!isNotifOpen) markAllRead();
+                }}
+                className={`relative p-2 transition-colors rounded-full ${isNotifOpen ? 'bg-slate-100 text-red-600' : 'bg-slate-50 text-slate-600 hover:text-red-600'}`}
+              >
+                <Bell className="w-6 h-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-600 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {isNotifOpen && (
+                <div 
+                  ref={notifRef}
+                  className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden z-[60] animate-fade-in"
+                >
+                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <h5 className="text-xs font-black uppercase tracking-widest text-slate-500">Alert Center</h5>
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={() => clearNotifications()}
+                        className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"
+                        title="Clear all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto divide-y divide-slate-100">
+                    {notifications.length > 0 ? notifications.map(n => (
+                      <div key={n.id} className={`p-4 hover:bg-slate-50 transition-colors flex items-start space-x-3 ${!n.read ? 'bg-blue-50/30' : ''}`}>
+                        <div className={`p-2 rounded-xl shrink-0 ${
+                          n.type === 'inventory' ? 'bg-amber-100 text-amber-600' :
+                          n.type === 'match' ? 'bg-red-100 text-red-600' : 
+                          n.type === 'system' ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-100 text-blue-600'
+                        }`}>
+                          {n.type === 'inventory' ? <AlertTriangle className="w-4 h-4" /> :
+                           n.type === 'match' ? <Users className="w-4 h-4" /> : 
+                           n.type === 'system' ? <Cloud className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-800 leading-tight mb-1">{n.title}</p>
+                          <p className="text-xs text-slate-500 leading-relaxed mb-2 line-clamp-2">{n.message}</p>
+                          <span className="text-[10px] font-black text-slate-300 uppercase">{n.timestamp}</span>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="p-12 text-center text-slate-400">
+                        <Bell className="w-10 h-10 mx-auto mb-3 opacity-10" />
+                        <p className="text-xs font-medium uppercase tracking-widest">No alerts found</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
+                    <button 
+                      onClick={() => {
+                        // Toggle settings as an example
+                        setNotifSettings(prev => ({...prev, systemAlerts: !prev.systemAlerts}));
+                        showToast(`System alerts ${!notifSettings.systemAlerts ? 'enabled' : 'disabled'}`, 'info');
+                      }}
+                      className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-600 transition-colors flex items-center justify-center space-x-1 mx-auto"
+                    >
+                      <Settings className="w-3 h-3" />
+                      <span>Notification Preferences</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button 
               ref={chatToggleRef}
               onClick={() => setIsChatOpen(!isChatOpen)}

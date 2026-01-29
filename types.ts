@@ -44,3 +44,18 @@ export interface ResourceDonation {
   details: string; // e.g., "5kg Rice", "10 Shirts", "$50"
   date: string;
 }
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'inventory' | 'match' | 'system' | 'reminder';
+  timestamp: string;
+  read: boolean;
+}
+
+export interface NotificationSettings {
+  inventoryAlerts: boolean;
+  matchAlerts: boolean;
+  systemAlerts: boolean;
+}
