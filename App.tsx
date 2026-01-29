@@ -94,6 +94,7 @@ const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<'connected' | 'syncing' | 'error'>('connected');
   
   const chatRef = useRef<HTMLDivElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const chatToggleRef = useRef<HTMLButtonElement>(null);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'info'} | null>(null);
 
@@ -185,6 +186,12 @@ const App: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [notification]);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, isTyping]);
 
   const handleLogout = () => {
     localStorage.removeItem('lifeflow_session');
@@ -337,9 +344,26 @@ const App: React.FC = () => {
     setChatMessages(prev => [...prev, { text: userMsg, sender: 'user' }]);
     setChatInput("");
     setIsTyping(true);
-    const botReply = await getAIChatResponse(userMsg);
+
+    // Initial empty bot message to fill via stream
+    setChatMessages(prev => [...prev, { text: "", sender: 'bot' }]);
+    
+    let isFirstChunk = true;
+    await getAIChatResponse(userMsg, (chunk) => {
+      if (isFirstChunk) {
+        setIsTyping(false);
+        isFirstChunk = false;
+      }
+      setChatMessages(prev => {
+        const next = [...prev];
+        const lastMsg = next[next.length - 1];
+        if (lastMsg && lastMsg.sender === 'bot') {
+          lastMsg.text += chunk;
+        }
+        return next;
+      });
+    });
     setIsTyping(false);
-    setChatMessages(prev => [...prev, { text: botReply, sender: 'bot' }]);
   };
 
   const filteredChatResults = useMemo(() => {
@@ -568,6 +592,7 @@ const App: React.FC = () => {
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.contact}</td>
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.lastDonation}</td>
                       <td className="px-6 py-4 text-right">
+                        {/* Fix: Correctly reference d.id instead of non-existent id */}
                         <button 
                           onClick={() => handleDeleteDonor(d.id)}
                           className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full"
@@ -1121,7 +1146,7 @@ const App: React.FC = () => {
                 )}
                 {chatMessages.map((m, i) => (
                   <div key={i} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                    <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                    <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
                       m.sender === 'user' ? 'bg-red-600 text-white rounded-br-none' : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
                     }`}>
                       {m.text}
@@ -1139,6 +1164,7 @@ const App: React.FC = () => {
                       </div>
                    </div>
                 )}
+                <div ref={chatEndRef} />
               </>
             )}
           </div>
@@ -1154,8 +1180,9 @@ const App: React.FC = () => {
                 onKeyDown={(e) => e.key === 'Enter' && handleAIChat()}
               />
               <button 
+                disabled={isTyping}
                 onClick={handleAIChat} 
-                className="p-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all shadow-lg shadow-red-100 active:scale-95"
+                className={`p-2.5 text-white rounded-xl transition-all shadow-lg active:scale-95 ${isTyping ? 'bg-slate-300' : 'bg-red-600 hover:bg-red-700 shadow-red-100'}`}
               >
                 <Send className="w-4 h-4" />
               </button>

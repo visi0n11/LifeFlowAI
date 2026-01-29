@@ -111,46 +111,63 @@ const getLocalResponse = (message: string): string | null => {
 
 /**
  * Communicates with Gemini AI to get contextual responses for the Blood Bank Assistant.
+ * Supports streaming for faster perceived performance.
  */
-export const getAIChatResponse = async (userMessage: string) => {
+export const getAIChatResponse = async (
+  userMessage: string, 
+  onChunk?: (chunk: string) => void
+) => {
   // 1. Try local FAQ (Offline-ready & instant)
   const localMatch = getLocalResponse(userMessage);
-  if (localMatch) return localMatch;
+  if (localMatch) {
+    if (onChunk) onChunk(localMatch);
+    return localMatch;
+  }
 
   // 2. Check for internet connectivity
   if (!navigator.onLine) {
-    return "I'm currently offline. I can still answer questions about eligibility, donation rules, blood types, medications, and team info (Vaghu, Aayan, Akash, Shreyash). How can I help?";
+    const offlineMsg = "I'm currently offline. I can still answer questions about eligibility, donation rules, blood types, medications, and team info (Vaghu, Aayan, Akash, Shreyash). How can I help?";
+    if (onChunk) onChunk(offlineMsg);
+    return offlineMsg;
   }
 
   // 3. Fallback to Gemini AI
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    return "API Key not configured. Please check system settings.";
+  if (!process.env.API_KEY) {
+    const errorMsg = "API Key not configured. Please check system settings.";
+    if (onChunk) onChunk(errorMsg);
+    return errorMsg;
   }
   
   try {
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
+    // Initializing with process.env.API_KEY as per guideline.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const responseStream = await ai.models.generateContentStream({
       model: 'gemini-3-flash-preview',
       contents: userMessage,
       config: {
-        systemInstruction: `You are LifeFlow AI, a highly specialized medical assistant for a blood donation system.
-        You have access to 100+ protocols regarding blood donation. 
-        
-        Key Knowledge:
-        - Whole blood (56 days), Platelets (7 days), Power Red (112 days).
-        - Hemoglobin min: 12.5 (F) / 13.0 (M).
-        - Common deferrals: Antibiotics (7 days), Tattoos (3 months if non-sterile), Travel (3 months for malaria).
-        - Team: Vaghu (O+), Aayan (B-), Akash (AB+), Shreyash (O+).
-        
-        Always provide professional, encouraging, and medically grounded advice. Refer users to doctors for complex personal medical history.`,
-        temperature: 0.7,
+        systemInstruction: `You are LifeFlow AI. Expert blood bank assistant. 
+        Knowledge: Whole blood(56d), Platelets(7d), Power Red(112d). 
+        Hb min: 12.5(F)/13.0(M). 
+        Deferrals: Tattoos(3m), Malaria travel(3m). 
+        Team: Vaghu(O+), Aayan(B-), Akash(AB+), Shreyash(O+).
+        Keep responses professional, encouraging, and medical-grounded. Conciseness is key for speed.`,
+        temperature: 0.5,
       },
     });
     
-    return response.text?.trim() || "I couldn't generate a specific response. Please try asking about eligibility or requirements.";
+    let fullText = "";
+    for await (const chunk of responseStream) {
+      // Direct text property access as required.
+      const chunkText = chunk.text || "";
+      fullText += chunkText;
+      if (onChunk) onChunk(chunkText);
+    }
+    
+    return fullText.trim() || "I couldn't generate a specific response. Please try asking about eligibility or requirements.";
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    return "I'm having trouble connecting to my advanced brain. Please ask a common question about donation eligibility or safety!";
+    const fallbackMsg = "I'm having trouble connecting to my advanced brain. Please ask a common question about donation eligibility or safety!";
+    if (onChunk) onChunk(fallbackMsg);
+    return fallbackMsg;
   }
 };
