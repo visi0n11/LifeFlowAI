@@ -1,13 +1,14 @@
 
 import React, { useState } from 'react';
-import { Heart, Mail, Lock, User as UserIcon, ShieldCheck, ArrowRight, ShieldAlert, KeyRound } from 'lucide-react';
+import { Heart, Mail, Lock, User as UserIcon, ShieldCheck, ArrowRight, ShieldAlert, KeyRound, X } from 'lucide-react';
 import { User, BloodType } from '../types';
 
 interface AuthProps {
   onLogin: (user: User) => void;
+  onClose?: () => void;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
+export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
   const [mode, setMode] = useState<'login' | 'signup' | 'admin'>('login');
   const [formData, setFormData] = useState({ 
     name: '', 
@@ -26,7 +27,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
     try {
       if (mode === 'admin') {
-        // Administrator specific login logic
         if (formData.email === 'admin@lifeflow.ai' && (formData.password === 'admin123' || formData.password === 'password')) {
           const admin: User = {
             id: 'auth-admin-system',
@@ -45,7 +45,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       }
 
       if (mode === 'login') {
-        // Standard hardcoded check for demo or local storage
         if (formData.email === 'admin@lifeflow.ai') {
           setError('Please use the Administrator Portal for this account.');
           return;
@@ -62,7 +61,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           setError('Invalid credentials. Please verify or create an account.');
         }
       } else {
-        // Sign Up
         const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
         if (savedUsers.some((u: any) => u.email === formData.email) || formData.email === 'admin@lifeflow.ai') {
           setError('This email is already registered in the cluster.');
@@ -88,12 +86,21 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 relative overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-6 overflow-y-auto">
       {/* Background Decor */}
       <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full mix-blend-multiply filter blur-[100px] opacity-20 animate-pulse transition-colors duration-700 ${mode === 'admin' ? 'bg-slate-900' : 'bg-red-400'}`}></div>
       <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full mix-blend-multiply filter blur-[100px] opacity-20 animate-pulse delay-1000 transition-colors duration-700 ${mode === 'admin' ? 'bg-indigo-900' : 'bg-blue-400'}`}></div>
 
-      <div className="bg-white/80 backdrop-blur-3xl p-8 sm:p-12 rounded-[2.5rem] shadow-[0_32px_80px_-12px_rgba(0,0,0,0.12)] w-full max-w-md border border-white relative z-10 animate-fade-in">
+      <div className="bg-white/90 backdrop-blur-3xl p-8 sm:p-12 rounded-[2.5rem] shadow-[0_32px_80px_-12px_rgba(0,0,0,0.12)] w-full max-w-md border border-white relative z-10 animate-fade-in my-auto">
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+        
         <div className="text-center mb-10">
           <div className={`inline-flex p-4 rounded-2xl mb-6 shadow-xl ring-4 transition-all duration-500 ${mode === 'admin' ? 'bg-slate-900 ring-slate-100 shadow-slate-200' : 'bg-red-600 ring-red-50 shadow-red-100'}`}>
             {mode === 'admin' ? <ShieldAlert className="w-8 h-8 text-white" /> : <Heart className="w-8 h-8 text-white fill-current" />}
