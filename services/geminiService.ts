@@ -5,7 +5,7 @@ import { GoogleGenAI } from "@google/genai";
  * Local knowledge base for blood donation FAQs.
  * Extremely comprehensive list of 100+ topics to ensure the chatbot is highly capable.
  */
-const LOCAL_FAQ = [
+export const LOCAL_FAQ = [
   {
     keywords: ["who", "can", "eligible", "donate", "requirement", "criteria", "age", "weight", "height"],
     response: "General Eligibility: You must be 18-65 years old (some areas allow 16-17 with consent), weigh at least 50kg (110 lbs), and be in good health. For 'Power Red' donations, height/weight requirements are stricter (e.g., Males: 5'1\"/130lbs, Females: 5'5\"/150lbs)."
@@ -119,7 +119,15 @@ export const getAIChatResponse = async (userMessage: string) => {
 
   // 2. Check for internet connectivity
   if (!navigator.onLine) {
-    return "I'm currently offline. I can still answer questions about donation rules, types, and health. I've been pre-loaded with over 100 responses for these topics!";
+    return "I'm currently offline, but I can still assist you! I've been pre-loaded with over 100 responses to help with: \n\n" +
+           "• Eligibility Requirements (age, weight, height)\n" +
+           "• Donation Rules & Frequency (whole blood, platelets, etc.)\n" +
+           "• Blood Types & Compatibility\n" +
+           "• Medications & Health Conditions\n" +
+           "• Travel Deferrals\n" +
+           "• Post-Donation Care\n" +
+           "• Team Info (Vaghu, Aayan, Akash, Shreyash)\n\n" +
+           "How can I help you save a life today?";
   }
 
   // 3. Fallback to Gemini AI

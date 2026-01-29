@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Heart, 
   Users, 
@@ -29,11 +29,16 @@ import {
   Coffee,
   Shirt,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  ChevronUp,
+  ChevronDown,
+  History,
+  BookOpen,
+  Filter
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Auth } from './components/Auth';
-import { getAIChatResponse } from './services/geminiService';
+import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
 import { User, Donor, Recipient, BloodBag, BloodType, ResourceDonation, ResourceType } from './types';
 
 // --- Constants ---
@@ -83,6 +88,8 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<{text: string, sender: 'user' | 'bot'}[]>([]);
   const [chatInput, setChatInput] = useState("");
+  const [chatSearchQuery, setChatSearchQuery] = useState("");
+  const [isChatSearchActive, setIsChatSearchActive] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [dbStatus, setDbStatus] = useState<'connected' | 'syncing' | 'error'>('connected');
   
@@ -125,6 +132,8 @@ const App: React.FC = () => {
       return initialResourceDonations;
     }
   });
+
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Donor; direction: 'asc' | 'desc' } | null>(null);
 
   const [matchResult, setMatchResult] = useState<Donor | null>(null);
   const [isDonorModalOpen, setIsDonorModalOpen] = useState(false);
@@ -226,6 +235,30 @@ const App: React.FC = () => {
     }
   };
 
+  const requestSort = (key: keyof Donor) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedDonors = useMemo(() => {
+    let sortableDonors = [...donors];
+    if (sortConfig !== null) {
+      sortableDonors.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableDonors;
+  }, [donors, sortConfig]);
+
   const handleAddRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRequest.name || !newRequest.bloodType) return;
@@ -309,6 +342,19 @@ const App: React.FC = () => {
     setChatMessages(prev => [...prev, { text: botReply, sender: 'bot' }]);
   };
 
+  const filteredChatResults = useMemo(() => {
+    if (!chatSearchQuery.trim()) return { messages: [], faq: [] };
+    const query = chatSearchQuery.toLowerCase();
+    
+    const messages = chatMessages.filter(m => m.text.toLowerCase().includes(query));
+    const faq = LOCAL_FAQ.filter(f => 
+      f.keywords.some(k => k.toLowerCase().includes(query)) || 
+      f.response.toLowerCase().includes(query)
+    );
+
+    return { messages, faq };
+  }, [chatSearchQuery, chatMessages]);
+
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'donors', label: 'Donors', icon: Users },
@@ -324,6 +370,11 @@ const App: React.FC = () => {
       case 'clothes': return <Shirt className="w-4 h-4" />;
       case 'money': return <DollarSign className="w-4 h-4" />;
     }
+  };
+
+  const getSortIcon = (key: keyof Donor) => {
+    if (!sortConfig || sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />;
   };
 
   return (
@@ -476,15 +527,39 @@ const App: React.FC = () => {
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Name</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Group</th>
+                    <th 
+                      className="px-6 py-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-red-600 transition-colors"
+                      onClick={() => requestSort('name')}
+                    >
+                      <div className="flex items-center">
+                        <span>Name</span>
+                        {getSortIcon('name')}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center cursor-pointer hover:text-red-600 transition-colors"
+                      onClick={() => requestSort('bloodType')}
+                    >
+                      <div className="flex items-center justify-center">
+                        <span>Group</span>
+                        {getSortIcon('bloodType')}
+                      </div>
+                    </th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Contact</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Last Donation</th>
+                    <th 
+                      className="px-6 py-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-red-600 transition-colors"
+                      onClick={() => requestSort('lastDonation')}
+                    >
+                      <div className="flex items-center">
+                        <span>Last Donation</span>
+                        {getSortIcon('lastDonation')}
+                      </div>
+                    </th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {donors.map(d => (
+                  {sortedDonors.map(d => (
                     <tr key={d.id} className="hover:bg-slate-50 transition-colors group">
                       <td className="px-6 py-4 font-semibold text-slate-800">{d.name}</td>
                       <td className="px-6 py-4 text-center">
@@ -938,62 +1013,152 @@ const App: React.FC = () => {
           ref={chatRef}
           className="fixed bottom-6 right-6 w-[350px] sm:w-[400px] h-[500px] sm:h-[600px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col z-50 overflow-hidden transition-all animate-fade-in"
         >
-          <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
-                <MessageSquare className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h4 className="font-bold leading-none">LifeFlow Assistant</h4>
-                <div className="flex items-center space-x-1.5 mt-1.5"><span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span><span className="text-[9px] opacity-80 uppercase tracking-widest font-bold">Online & Sycned</span></div>
-              </div>
-            </div>
-            <button onClick={() => setIsChatOpen(false)} className="hover:bg-white/20 p-2 rounded-full transition-colors"><X className="w-5 h-5" /></button>
-          </div>
-
-          <div className="flex-1 p-6 space-y-4 overflow-y-auto bg-slate-50/50">
-            {chatMessages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                  <Activity className="w-10 h-10 text-red-600" />
-                </div>
-                <h5 className="font-bold text-slate-800 mb-2">Connected to Atlas</h5>
-                <p className="text-sm text-slate-500 leading-relaxed">Ask me about donation eligibility or system status.</p>
-              </div>
-            )}
-            {chatMessages.map((m, i) => (
-              <div key={i} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                  m.sender === 'user' ? 'bg-red-600 text-white rounded-br-none' : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
-                }`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            {isTyping && (
-               <div className="flex justify-start">
-                  <div className="bg-white px-4 py-3 rounded-2xl border border-slate-200 rounded-bl-none">
-                    <div className="flex space-x-1">
-                      <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce"></div>
-                      <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce delay-75"></div>
-                      <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce delay-150"></div>
+          <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white flex items-center justify-between shadow-lg">
+            {!isChatSearchActive ? (
+              <>
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
+                    <MessageSquare className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold leading-none">LifeFlow Assistant</h4>
+                    <div className="flex items-center space-x-1.5 mt-1.5">
+                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                      <span className="text-[9px] opacity-80 uppercase tracking-widest font-bold">Live AI Cluster</span>
                     </div>
                   </div>
-               </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <button 
+                    onClick={() => setIsChatSearchActive(true)}
+                    className="hover:bg-white/20 p-2 rounded-full transition-colors"
+                    title="Search chat"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => setIsChatOpen(false)} className="hover:bg-white/20 p-2 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center space-x-2 w-full animate-fade-in">
+                <Search className="w-4 h-4 opacity-70" />
+                <input 
+                  autoFocus
+                  type="text" 
+                  className="bg-transparent border-none outline-none text-white text-sm w-full placeholder:text-white/50"
+                  placeholder="Search history or FAQs..."
+                  value={chatSearchQuery}
+                  onChange={(e) => setChatSearchQuery(e.target.value)}
+                />
+                <button 
+                  onClick={() => {
+                    setIsChatSearchActive(false);
+                    setChatSearchQuery("");
+                  }}
+                  className="hover:bg-white/20 p-1.5 rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 p-6 space-y-4 overflow-y-auto bg-slate-50/50 scroll-smooth">
+            {isChatSearchActive && chatSearchQuery.trim() !== "" ? (
+              <div className="space-y-6 animate-fade-in pb-4">
+                {filteredChatResults.messages.length > 0 && (
+                  <div>
+                    <div className="flex items-center space-x-2 mb-3 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      <History className="w-3 h-3" />
+                      <span>Chat History Matches</span>
+                    </div>
+                    <div className="space-y-2">
+                      {filteredChatResults.messages.map((m, i) => (
+                        <div key={i} className={`p-3 rounded-xl border text-xs leading-relaxed ${
+                          m.sender === 'user' ? 'bg-red-50 border-red-100 text-red-700 ml-4' : 'bg-white border-slate-200 text-slate-600 mr-4'
+                        }`}>
+                          {m.text}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {filteredChatResults.faq.length > 0 && (
+                  <div>
+                    <div className="flex items-center space-x-2 mb-3 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      <BookOpen className="w-3 h-3" />
+                      <span>Knowledge Base Matches</span>
+                    </div>
+                    <div className="space-y-2">
+                      {filteredChatResults.faq.map((f, i) => (
+                        <div key={i} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm animate-fade-in">
+                          <p className="text-[10px] font-black text-red-600 uppercase mb-1">{f.keywords.slice(0, 3).join(', ')}</p>
+                          <p className="text-xs text-slate-600 leading-relaxed">{f.response}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {filteredChatResults.messages.length === 0 && filteredChatResults.faq.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-center py-20 grayscale opacity-40">
+                    <Filter className="w-12 h-12 text-slate-300 mb-4" />
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No results found</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {chatMessages.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4 ring-8 ring-red-50">
+                      <Activity className="w-10 h-10 text-red-600" />
+                    </div>
+                    <h5 className="font-bold text-slate-800 mb-2">Connected to Atlas</h5>
+                    <p className="text-sm text-slate-500 leading-relaxed">Ask me about donation eligibility or system status.</p>
+                  </div>
+                )}
+                {chatMessages.map((m, i) => (
+                  <div key={i} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                    <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                      m.sender === 'user' ? 'bg-red-600 text-white rounded-br-none' : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
+                    }`}>
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+                {isTyping && (
+                   <div className="flex justify-start">
+                      <div className="bg-white px-4 py-3 rounded-2xl border border-slate-200 rounded-bl-none shadow-sm">
+                        <div className="flex space-x-1.5">
+                          <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce delay-75"></div>
+                          <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce delay-150"></div>
+                        </div>
+                      </div>
+                   </div>
+                )}
+              </>
             )}
           </div>
 
           <div className="p-4 bg-white border-t border-slate-100">
-            <div className="flex items-center space-x-2 bg-slate-100 rounded-2xl px-4 py-1.5 border border-slate-200">
+            <div className="flex items-center space-x-2 bg-slate-50 rounded-2xl px-4 py-1.5 border border-slate-200 focus-within:ring-4 focus-within:ring-red-500/10 transition-all">
               <input 
                 type="text" 
-                className="flex-1 bg-transparent py-2.5 text-sm outline-none text-slate-700" 
+                className="flex-1 bg-transparent py-2.5 text-sm outline-none text-slate-700 placeholder:text-slate-400" 
                 placeholder="Ask query..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAIChat()}
               />
-              <button onClick={handleAIChat} className="p-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"><Send className="w-4 h-4" /></button>
+              <button 
+                onClick={handleAIChat} 
+                className="p-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all shadow-lg shadow-red-100 active:scale-95"
+              >
+                <Send className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -1001,7 +1166,7 @@ const App: React.FC = () => {
 
       <footer className="bg-slate-900 text-slate-400 py-6 px-6 mt-auto">
         <div className="max-w-7xl mx-auto flex flex-col space-y-4">
-          <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-4 space-y-4 md:space-y-0">
+          <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-4 space-y-4 md:mt-0 md:space-y-0">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Heart className="w-5 h-5 text-red-500 fill-current" />
