@@ -1023,7 +1023,7 @@ const App: React.FC = () => {
               &copy; 2025 LifeFlow AI • Developed by YBIT, Sawantwadi
             </div>
             <div className="flex items-center space-x-6 mt-2 md:mt-0">
-              <a href="#" className="hover:text-white transition-colors">Emergency: 1-800-LIFE</a>
+              <a href="tel:112" className="hover:text-white transition-colors">Emergency: 112</a>
               <a href="https://ai.google.dev/" target="_blank" className="flex items-center space-x-1 text-slate-500 hover:text-white transition-colors">
                 <Globe className="w-3 h-3" />
                 <span>Powered by Gemini 3</span>
