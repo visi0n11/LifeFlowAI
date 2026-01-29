@@ -92,6 +92,7 @@ const App: React.FC = () => {
   const [isChatSearchActive, setIsChatSearchActive] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [dbStatus, setDbStatus] = useState<'connected' | 'syncing' | 'error'>('connected');
+  const [isSyncingExternally, setIsSyncingExternally] = useState(false);
   
   const chatRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -133,6 +134,47 @@ const App: React.FC = () => {
       return initialResourceDonations;
     }
   });
+
+  // --- Real-time Synchronizer ---
+  useEffect(() => {
+    const handleStorageUpdate = (e: StorageEvent) => {
+      if (!e.newValue) return;
+
+      let updated = false;
+      const parsedData = JSON.parse(e.newValue);
+
+      switch (e.key) {
+        case 'lifeflow_donors':
+          setDonors(parsedData);
+          updated = true;
+          break;
+        case 'lifeflow_recipients':
+          setRecipients(parsedData);
+          updated = true;
+          break;
+        case 'lifeflow_bags':
+          setBags(parsedData);
+          updated = true;
+          break;
+        case 'lifeflow_resources':
+          setResourceDonations(parsedData);
+          updated = true;
+          break;
+        case 'lifeflow_session':
+          setCurrentUser(parsedData);
+          break;
+      }
+
+      if (updated) {
+        setIsSyncingExternally(true);
+        setTimeout(() => setIsSyncingExternally(false), 2000);
+        showToast("Directory synced with network update", 'info');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageUpdate);
+    return () => window.removeEventListener('storage', handleStorageUpdate);
+  }, []);
 
   const [sortConfig, setSortConfig] = useState<{ key: keyof Donor; direction: 'asc' | 'desc' } | null>(null);
 
@@ -345,7 +387,6 @@ const App: React.FC = () => {
     setChatInput("");
     setIsTyping(true);
 
-    // Initial empty bot message to fill via stream
     setChatMessages(prev => [...prev, { text: "", sender: 'bot' }]);
     
     let isFirstChunk = true;
@@ -436,8 +477,10 @@ const App: React.FC = () => {
             <div className="flex flex-col">
                <span className="font-bold text-lg tracking-tight text-slate-800 leading-none">LifeFlow AI</span>
                <div className="flex items-center space-x-1 mt-0.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${dbStatus === 'connected' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}></div>
-                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Atlas Connected</span>
+                  <div className={`w-1.5 h-1.5 rounded-full ${isSyncingExternally ? 'bg-blue-500 animate-pulse' : dbStatus === 'connected' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}></div>
+                  <span className={`text-[8px] font-bold uppercase tracking-tighter ${isSyncingExternally ? 'text-blue-500' : 'text-slate-400'}`}>
+                    {isSyncingExternally ? 'Remote Syncing...' : 'Atlas Connected'}
+                  </span>
                </div>
             </div>
           </div>
@@ -592,7 +635,6 @@ const App: React.FC = () => {
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.contact}</td>
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.lastDonation}</td>
                       <td className="px-6 py-4 text-right">
-                        {/* Fix: Correctly reference d.id instead of non-existent id */}
                         <button 
                           onClick={() => handleDeleteDonor(d.id)}
                           className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full"
@@ -891,6 +933,7 @@ const App: React.FC = () => {
         )}
       </main>
 
+      {/* Modals and Overlays */}
       {isDonorModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl animate-fade-in overflow-hidden border border-slate-200">
@@ -1205,7 +1248,7 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4 bg-slate-800/40 px-3 py-1.5 rounded-full border border-slate-800">
-               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+               <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isSyncingExternally ? 'bg-blue-500' : 'bg-green-500'}`}></div>
                <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">Atlas: AIBloodDonationcluster</span>
             </div>
           </div>
