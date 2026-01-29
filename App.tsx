@@ -206,6 +206,15 @@ const App: React.FC = () => {
     setNewDonor({ name: '', age: '', bloodType: 'A+', contact: '' });
   };
 
+  const handleDeleteDonor = (id: number) => {
+    const donor = donors.find(d => d.id === id);
+    if (!donor) return;
+    if (window.confirm(`Are you sure you want to remove ${donor.name} from the directory?`)) {
+      setDonors(prev => prev.filter(d => d.id !== id));
+      showToast(`Donor ${donor.name} removed`, 'info');
+    }
+  };
+
   const handleAddRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRequest.name || !newRequest.bloodType) return;
@@ -271,21 +280,12 @@ const App: React.FC = () => {
   };
 
   const navItems = [
-    { id: 'home', label: 'Home', icon: Home, public: true },
-    { id: 'donors', label: 'Donors', icon: Users, public: false },
-    { id: 'recipients', label: 'Recipients', icon: Activity, public: false },
-    { id: 'bloodbags', label: 'Inventory', icon: Droplet, public: false },
-    { id: 'dashboard', label: 'Analytics', icon: Activity, public: false },
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'donors', label: 'Donors', icon: Users },
+    { id: 'recipients', label: 'Recipients', icon: Activity },
+    { id: 'bloodbags', label: 'Inventory', icon: Droplet },
+    { id: 'dashboard', label: 'Analytics', icon: Activity },
   ];
-
-  const handleTabClick = (id: string, isPublic: boolean) => {
-    if (!isPublic && !currentUser) {
-      setIsAuthOpen(true);
-      showToast('Please sign in to access cluster records', 'info');
-    } else {
-      setActiveTab(id);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -332,14 +332,13 @@ const App: React.FC = () => {
             {navItems.map(item => (
               <button
                 key={item.id}
-                onClick={() => handleTabClick(item.id, item.public)}
+                onClick={() => setActiveTab(item.id)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   activeTab === item.id ? 'bg-red-50 text-red-700' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <item.icon className="w-4 h-4" />
                 <span>{item.label}</span>
-                {!item.public && !currentUser && <Lock className="w-3 h-3 opacity-30 ml-1" />}
               </button>
             ))}
           </div>
@@ -394,13 +393,13 @@ const App: React.FC = () => {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <button 
-                onClick={() => handleTabClick('donors', false)} 
+                onClick={() => setActiveTab('donors')} 
                 className="px-10 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all"
               >
                 Become a Donor
               </button>
               <button 
-                onClick={() => handleTabClick('bloodbags', false)} 
+                onClick={() => setActiveTab('bloodbags')} 
                 className="px-10 py-4 bg-white border border-slate-200 text-slate-800 font-bold rounded-xl hover:bg-slate-50 transition-all"
               >
                 Check Availability
@@ -425,226 +424,232 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {currentUser && (
-          <>
-            {activeTab === 'donors' && (
-              <div className="space-y-8 animate-fade-in">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-4">
-                  <h2 className="text-2xl font-bold text-slate-800">Donor Directory</h2>
-                  <button onClick={() => setIsDonorModalOpen(true)} className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 flex items-center space-x-2">
-                    <Plus className="w-4 h-4" />
-                    <span>Add Donor</span>
-                  </button>
-                </div>
-                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                      <tr>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Name</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Group</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Contact</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Last Donation</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {donors.map(d => (
-                        <tr key={d.id} className="hover:bg-slate-50 transition-colors group">
-                          <td className="px-6 py-4 font-semibold text-slate-800">{d.name}</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className="inline-block px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">{d.bloodType}</span>
-                          </td>
-                          <td className="px-6 py-4 text-slate-500 text-sm">{d.contact}</td>
-                          <td className="px-6 py-4 text-slate-500 text-sm">{d.lastDonation}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'recipients' && (
-              <div className="space-y-8 animate-fade-in">
-                 <div className="border-b border-slate-200 pb-4">
-                  <h2 className="text-2xl font-bold text-slate-800">AI Matching Center</h2>
-                  <p className="text-slate-500 text-sm mt-1">Connect patients with the cluster's compatible donors.</p>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 className="text-lg font-bold mb-6 text-slate-800">New Match Request</h3>
-                    <form onSubmit={handleAddRequest} className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Recipient Name</label>
-                        <input 
-                          type="text" required
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none" 
-                          placeholder="Enter patient name" 
-                          value={newRequest.name}
-                          onChange={e => setNewRequest({...newRequest, name: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Required Type</label>
-                        <select 
-                          required
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none appearance-none"
-                          value={newRequest.bloodType}
-                          onChange={e => {
-                            setNewRequest({...newRequest, bloodType: e.target.value as BloodType});
-                            findBestMatch(e.target.value as BloodType);
-                          }}
+        {activeTab === 'donors' && (
+          <div className="space-y-8 animate-fade-in">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+              <h2 className="text-2xl font-bold text-slate-800">Donor Directory</h2>
+              <button onClick={() => setIsDonorModalOpen(true)} className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 flex items-center space-x-2">
+                <Plus className="w-4 h-4" />
+                <span>Add Donor</span>
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Name</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Group</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Contact</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Last Donation</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {donors.map(d => (
+                    <tr key={d.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="px-6 py-4 font-semibold text-slate-800">{d.name}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-block px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">{d.bloodType}</span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 text-sm">{d.contact}</td>
+                      <td className="px-6 py-4 text-slate-500 text-sm">{d.lastDonation}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button 
+                          onClick={() => handleDeleteDonor(d.id)}
+                          className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full"
+                          title="Delete Donor"
                         >
-                          <option value="">Select Blood Group</option>
-                          {BLOOD_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                        </select>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'recipients' && (
+          <div className="space-y-8 animate-fade-in">
+             <div className="border-b border-slate-200 pb-4">
+              <h2 className="text-2xl font-bold text-slate-800">AI Matching Center</h2>
+              <p className="text-slate-500 text-sm mt-1">Connect patients with the cluster's compatible donors.</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 className="text-lg font-bold mb-6 text-slate-800">New Match Request</h3>
+                <form onSubmit={handleAddRequest} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Recipient Name</label>
+                    <input 
+                      type="text" required
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none" 
+                      placeholder="Enter patient name" 
+                      value={newRequest.name}
+                      onChange={e => setNewRequest({...newRequest, name: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Required Type</label>
+                    <select 
+                      required
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none appearance-none"
+                      value={newRequest.bloodType}
+                      onChange={e => {
+                        setNewRequest({...newRequest, bloodType: e.target.value as BloodType});
+                        findBestMatch(e.target.value as BloodType);
+                      }}
+                    >
+                      <option value="">Select Blood Group</option>
+                      {BLOOD_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                  </div>
+                  <button 
+                    disabled={isSaving}
+                    type="submit" 
+                    className="w-full py-3.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center space-x-2"
+                  >
+                    {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    <span>{isSaving ? 'Scanning...' : 'Start Matching'}</span>
+                  </button>
+                </form>
+              </div>
+
+              <div className="lg:col-span-2 space-y-6">
+                {matchResult ? (
+                  <div className="bg-green-50 border border-green-200 p-8 rounded-2xl flex items-start space-x-6 animate-fade-in">
+                    <div className="p-4 bg-green-500 rounded-2xl shadow-lg shadow-green-100">
+                      <CheckCircle className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-green-900 mb-1">Perfect Match Found!</h3>
+                      <p className="text-green-700 mb-4 opacity-80">Our AI has located a compatible donor in the cluster.</p>
+                      <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+                        <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100">
+                          <p className="text-slate-400 font-bold uppercase text-[10px]">Donor Name</p>
+                          <p className="text-slate-800 font-bold">{matchResult.name}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100">
+                          <p className="text-slate-400 font-bold uppercase text-[10px]">Compatible Group</p>
+                          <p className="text-red-600 font-bold">{matchResult.bloodType}</p>
+                        </div>
                       </div>
                       <button 
-                        disabled={isSaving}
-                        type="submit" 
-                        className="w-full py-3.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center space-x-2"
+                        onClick={handleNotifyDonor}
+                        className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-sm transition-all flex items-center space-x-2"
                       >
-                        {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                        <span>{isSaving ? 'Scanning...' : 'Start Matching'}</span>
+                        <Bell className="w-4 h-4" />
+                        <span>Dispatch Alert</span>
                       </button>
-                    </form>
+                    </div>
                   </div>
-
-                  <div className="lg:col-span-2 space-y-6">
-                    {matchResult ? (
-                      <div className="bg-green-50 border border-green-200 p-8 rounded-2xl flex items-start space-x-6 animate-fade-in">
-                        <div className="p-4 bg-green-500 rounded-2xl shadow-lg shadow-green-100">
-                          <CheckCircle className="w-8 h-8 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-green-900 mb-1">Perfect Match Found!</h3>
-                          <p className="text-green-700 mb-4 opacity-80">Our AI has located a compatible donor in the cluster.</p>
-                          <div className="grid grid-cols-2 gap-4 text-sm mb-6">
-                            <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100">
-                              <p className="text-slate-400 font-bold uppercase text-[10px]">Donor Name</p>
-                              <p className="text-slate-800 font-bold">{matchResult.name}</p>
-                            </div>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100">
-                              <p className="text-slate-400 font-bold uppercase text-[10px]">Compatible Group</p>
-                              <p className="text-red-600 font-bold">{matchResult.bloodType}</p>
-                            </div>
+                ) : (
+                  <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl h-full flex flex-col items-center justify-center p-12 text-center text-slate-400">
+                    <Activity className="w-12 h-12 mb-4 opacity-20" />
+                    <p className="font-medium">Run a scan to view AI-powered matching results.</p>
+                  </div>
+                )}
+                
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-6">
+                  <div className="p-4 border-b border-slate-100 font-bold text-slate-800">Pending Requests</div>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {recipients.length > 0 ? recipients.map(r => (
+                       <div key={r.id} className="p-4 flex justify-between items-center border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center space-x-3">
+                             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400 uppercase">{r.name.charAt(0)}</div>
+                             <div>
+                                <p className="font-bold text-slate-800">{r.name}</p>
+                                <p className="text-[10px] text-slate-400 uppercase font-black">{r.condition}</p>
+                             </div>
                           </div>
-                          <button 
-                            onClick={handleNotifyDonor}
-                            className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-sm transition-all flex items-center space-x-2"
-                          >
-                            <Bell className="w-4 h-4" />
-                            <span>Dispatch Alert</span>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl h-full flex flex-col items-center justify-center p-12 text-center text-slate-400">
-                        <Activity className="w-12 h-12 mb-4 opacity-20" />
-                        <p className="font-medium">Run a scan to view AI-powered matching results.</p>
-                      </div>
+                          <span className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-black">{r.bloodType}</span>
+                       </div>
+                    )) : (
+                      <div className="p-12 text-center text-slate-400 text-sm italic">No pending requests found.</div>
                     )}
-                    
-                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-6">
-                      <div className="p-4 border-b border-slate-100 font-bold text-slate-800">Pending Requests</div>
-                      <div className="max-h-[300px] overflow-y-auto">
-                        {recipients.length > 0 ? recipients.map(r => (
-                           <div key={r.id} className="p-4 flex justify-between items-center border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                              <div className="flex items-center space-x-3">
-                                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-400 uppercase">{r.name.charAt(0)}</div>
-                                 <div>
-                                    <p className="font-bold text-slate-800">{r.name}</p>
-                                    <p className="text-[10px] text-slate-400 uppercase font-black">{r.condition}</p>
-                                 </div>
-                              </div>
-                              <span className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-black">{r.bloodType}</span>
-                           </div>
-                        )) : (
-                          <div className="p-12 text-center text-slate-400 text-sm italic">No pending requests found.</div>
-                        )}
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
-            {activeTab === 'bloodbags' && (
-              <div className="space-y-8 animate-fade-in">
-                 <div className="flex justify-between items-center border-b border-slate-200 pb-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Inventory Management</h2>
-                    <p className="text-slate-500 text-sm">Real-time blood unit tracking.</p>
+        {activeTab === 'bloodbags' && (
+          <div className="space-y-8 animate-fade-in">
+             <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800">Inventory Management</h2>
+                <p className="text-slate-500 text-sm">Real-time blood unit tracking.</p>
+              </div>
+              <button 
+                onClick={() => setIsBagModalOpen(true)}
+                className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center space-x-2 shadow-lg shadow-slate-200"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Unit</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {bags.map(bag => (
+                <div key={bag.id} className="bg-white rounded-2xl border border-slate-200 p-6 relative overflow-hidden group hover:shadow-md transition-all">
+                  <div className="absolute top-0 right-0 w-12 h-12 bg-red-50 -mr-6 -mt-6 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                  <div className="relative">
+                    <div className="text-3xl font-black text-red-600 mb-4">{bag.type}</div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between text-slate-400 uppercase font-bold tracking-widest"><span>Vol.</span><span className="text-slate-800">{bag.volume}</span></div>
+                      <div className="flex justify-between text-slate-400 uppercase font-bold tracking-widest"><span>Date.</span><span className="text-slate-800">{bag.donationDate}</span></div>
+                      <div className="flex justify-between text-slate-400 uppercase font-bold tracking-widest"><span>Exp.</span><span className="text-red-500">{bag.expiryDate}</span></div>
+                    </div>
+                    <div className="mt-6 pt-4 border-t border-slate-100 flex gap-2">
+                      <button 
+                        onClick={() => showToast(`Report generated for ${bag.type} unit #${bag.id}`, 'info')}
+                        className="flex-1 text-[9px] font-black uppercase tracking-widest bg-slate-50 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                      >
+                        History
+                      </button>
+                      <button 
+                        onClick={() => handleDispatchBag(bag.id)}
+                        className="flex-1 text-[9px] font-black uppercase tracking-widest bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-1"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Dispatch</span>
+                      </button>
+                    </div>
                   </div>
-                  <button 
-                    onClick={() => setIsBagModalOpen(true)}
-                    className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center space-x-2 shadow-lg shadow-slate-200"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Unit</span>
-                  </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {bags.map(bag => (
-                    <div key={bag.id} className="bg-white rounded-2xl border border-slate-200 p-6 relative overflow-hidden group hover:shadow-md transition-all">
-                      <div className="absolute top-0 right-0 w-12 h-12 bg-red-50 -mr-6 -mt-6 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                      <div className="relative">
-                        <div className="text-3xl font-black text-red-600 mb-4">{bag.type}</div>
-                        <div className="space-y-2 text-xs">
-                          <div className="flex justify-between text-slate-400 uppercase font-bold tracking-widest"><span>Vol.</span><span className="text-slate-800">{bag.volume}</span></div>
-                          <div className="flex justify-between text-slate-400 uppercase font-bold tracking-widest"><span>Date.</span><span className="text-slate-800">{bag.donationDate}</span></div>
-                          <div className="flex justify-between text-slate-400 uppercase font-bold tracking-widest"><span>Exp.</span><span className="text-red-500">{bag.expiryDate}</span></div>
-                        </div>
-                        <div className="mt-6 pt-4 border-t border-slate-100 flex gap-2">
-                          <button 
-                            onClick={() => showToast(`Report generated for ${bag.type} unit #${bag.id}`, 'info')}
-                            className="flex-1 text-[9px] font-black uppercase tracking-widest bg-slate-50 py-2 rounded-lg hover:bg-slate-100 transition-colors"
-                          >
-                            History
-                          </button>
-                          <button 
-                            onClick={() => handleDispatchBag(bag.id)}
-                            className="flex-1 text-[9px] font-black uppercase tracking-widest bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-1"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            <span>Dispatch</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <button 
-                    onClick={() => setIsBagModalOpen(true)}
-                    className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-400 hover:bg-white hover:border-red-400 hover:text-red-400 transition-all"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-2"><Plus className="w-6 h-6" /></div>
-                    <span className="font-bold text-xs uppercase tracking-widest">New Unit</span>
-                  </button>
-                </div>
-              </div>
-            )}
+              ))}
+              <button 
+                onClick={() => setIsBagModalOpen(true)}
+                className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-400 hover:bg-white hover:border-red-400 hover:text-red-400 transition-all"
+              >
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-2"><Plus className="w-6 h-6" /></div>
+                <span className="font-bold text-xs uppercase tracking-widest">New Unit</span>
+              </button>
+            </div>
+          </div>
+        )}
 
-            {activeTab === 'dashboard' && (
-              <div className="space-y-8 animate-fade-in">
-                <h2 className="text-2xl font-bold text-slate-800 mb-6 tracking-tight">System Performance</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[
-                    { label: 'Units Stored', val: bags.length, icon: Database, color: 'text-red-600' },
-                    { label: 'Active Donors', val: donors.length, icon: Users, color: 'text-blue-600' },
-                    { label: 'Cloud Status', val: 'Healthy', icon: Cloud, color: 'text-green-600' },
-                    { label: 'Pending Req', val: recipients.length, icon: Activity, color: 'text-orange-600' },
-                  ].map((k, i) => (
-                    <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-2">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{k.label}</p>
-                        <k.icon className={`w-4 h-4 ${k.color} opacity-50`} />
-                      </div>
-                      <p className={`text-3xl font-black ${k.color}`}>{k.val}</p>
-                    </div>
-                  ))}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-8 animate-fade-in">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 tracking-tight">System Performance</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { label: 'Units Stored', val: bags.length, icon: Database, color: 'text-red-600' },
+                { label: 'Active Donors', val: donors.length, icon: Users, color: 'text-blue-600' },
+                { label: 'Cloud Status', val: 'Healthy', icon: Cloud, color: 'text-green-600' },
+                { label: 'Pending Req', val: recipients.length, icon: Activity, color: 'text-orange-600' },
+              ].map((k, i) => (
+                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{k.label}</p>
+                    <k.icon className={`w-4 h-4 ${k.color} opacity-50`} />
+                  </div>
+                  <p className={`text-3xl font-black ${k.color}`}>{k.val}</p>
                 </div>
-              </div>
-            )}
-          </>
+              ))}
+            </div>
+          </div>
         )}
       </main>
 
