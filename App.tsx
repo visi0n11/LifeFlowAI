@@ -39,7 +39,8 @@ import {
   QrCode,
   CreditCard,
   Smartphone,
-  Mail
+  Mail,
+  AlertCircle
 } from 'lucide-react';
 import { Auth } from './components/Auth';
 import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
@@ -539,9 +540,23 @@ const App: React.FC = () => {
     setMatchResult(null);
   };
 
+  const handleSendUrgentRequest = (donor: Donor) => {
+    const subject = "URGENT: Life-Saving Blood Donation Needed";
+    const body = `Hello,\n\nWe urgently need blood for a patient in critical condition. Your donation could save a life today. If you are available and eligible to donate, please consider helping.\n\nYour support would mean more than words can express.\n\nThank you,\nLifeFlow AI Team\n(Contact: blooddonationlifeflowai@gmail.com)`;
+    const mailtoUrl = `mailto:${donor.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+    
+    addNotification({
+      title: 'Urgent Request Sent',
+      message: `Emergency message drafted for ${donor.name} (${donor.email})`,
+      type: 'match'
+    });
+    showToast(`Urgent request drafted for ${donor.name}`, 'success');
+  };
+
   const handleEmailDonor = (donor: Donor) => {
     const subject = "Urgent: Blood Donation Needed";
-    const body = `Hi ${donor.name},\n\nSomeone needs blood. If you're ready, please tell us.\n\nThank you,\nLifeFlow AI Team`;
+    const body = `Hi ${donor.name},\n\nSomeone needs blood. If you're ready, please tell us.\n\nThank you,\nLifeFlow AI Team\n(Contact: blooddonationlifeflowai@gmail.com)`;
     const mailtoUrl = `mailto:${donor.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
     
@@ -807,6 +822,9 @@ const App: React.FC = () => {
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.lastDonation}</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end space-x-2">
+                          <button onClick={() => handleSendUrgentRequest(d)} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full" title="Send Urgent Request">
+                            <AlertCircle className="w-4 h-4" />
+                          </button>
                           <button onClick={() => handleEmailDonor(d)} className="p-2 text-slate-400 hover:text-green-600 transition-colors bg-slate-50 rounded-full" title="Send Email">
                             <Mail className="w-4 h-4" />
                           </button>
@@ -932,7 +950,10 @@ const App: React.FC = () => {
                         <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100"><p className="text-slate-400 font-bold uppercase text-[10px]">Donor</p><p className="text-slate-800 font-bold">{matchResult.name}</p></div>
                         <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100"><p className="text-slate-400 font-bold uppercase text-[10px]">Group</p><p className="text-red-600 font-bold">{matchResult.bloodType}</p></div>
                       </div>
-                      <button onClick={handleNotifyDonor} className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg flex items-center space-x-2"><Bell className="w-4 h-4" /><span>Dispatch Alert</span></button>
+                      <div className="flex space-x-3">
+                        <button onClick={handleNotifyDonor} className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg flex items-center space-x-2"><Bell className="w-4 h-4" /><span>Dispatch Alert</span></button>
+                        <button onClick={() => handleSendUrgentRequest(matchResult)} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg flex items-center space-x-2"><AlertCircle className="w-4 h-4" /><span>Urgent Request</span></button>
+                      </div>
                     </div>
                   </div>
                 ) : <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl h-full flex flex-col items-center justify-center p-12 text-center text-slate-400"><Activity className="w-12 h-12 mb-4 opacity-20" /><p className="font-medium">Run a verified scan to view matches.</p></div>}
@@ -1156,6 +1177,10 @@ const App: React.FC = () => {
           <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-slate-600">
             <div>&copy; 2025 LifeFlow AI • Team Vaghu, Aayan, Akash, Shreyash</div>
             <div className="flex items-center space-x-6">
+              <a href="mailto:blooddonationlifeflowai@gmail.com" className="flex items-center space-x-1 hover:text-red-500 transition-colors">
+                <Mail className="w-3 h-3" />
+                <span>Contact Us</span>
+              </a>
               <button onClick={handleReportIssue} className="flex items-center space-x-1 hover:text-red-500 transition-colors">
                 <LifeBuoy className="w-3 h-3" />
                 <span>Report Issue</span>
