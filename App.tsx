@@ -446,12 +446,18 @@ const App: React.FC = () => {
       const possibleDonors = donors.filter(d => compatibleTypes.includes(d.bloodType));
       
       if (possibleDonors.length > 0) {
-        setMatchResult(possibleDonors[0]);
+        const bestMatch = possibleDonors[0];
+        setMatchResult(bestMatch);
         addNotification({
           title: 'Match Found',
-          message: `A compatible donor (${possibleDonors[0].bloodType}) has been found for ${request.name}.`,
+          message: `A compatible donor (${bestMatch.bloodType}) has been found for ${request.name}.`,
           type: 'match'
         });
+        
+        // Automatically trigger the urgent request if email exists
+        if (bestMatch.email) {
+          handleSendUrgentRequest(bestMatch);
+        }
       } else {
         setMatchResult(null);
         addNotification({
@@ -540,18 +546,55 @@ const App: React.FC = () => {
     setMatchResult(null);
   };
 
-  const handleSendUrgentRequest = (donor: Donor) => {
-    const subject = "URGENT: Life-Saving Blood Donation Needed";
-    const body = `Hello,\n\nWe urgently need blood for a patient in critical condition. Your donation could save a life today. If you are available and eligible to donate, please consider helping.\n\nYour support would mean more than words can express.\n\nThank you,\nLifeFlow AI Team\n(Contact: blooddonationlifeflowai@gmail.com)`;
-    const mailtoUrl = `mailto:${donor.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoUrl;
-    
-    addNotification({
-      title: 'Urgent Request Sent',
-      message: `Emergency message drafted for ${donor.name} (${donor.email})`,
-      type: 'match'
-    });
-    showToast(`Urgent request drafted for ${donor.name}`, 'success');
+  const handleSendUrgentRequest = async (donor: Donor) => {
+    if (!donor.email) {
+      showToast('Donor has no email address', 'info');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/send-urgent-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: donor.email,
+          donorName: donor.name,
+          bloodType: donor.bloodType
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        addNotification({
+          title: 'Urgent Email Sent',
+          message: `Automatic emergency message sent to ${donor.name} (${donor.email})`,
+          type: 'match'
+        });
+        showToast(`Urgent email sent to ${donor.name}`, 'success');
+      } else {
+        // Fallback to mailto if server fails (e.g. missing credentials)
+        console.warn("Automatic send failed, falling back to mailto:", data.error);
+        const subject = "URGENT: Life-Saving Blood Donation Needed";
+        const body = `Hello,\n\nWe urgently need blood for a patient in critical condition. Your donation could save a life today. If you are available and eligible to donate, please consider helping.\n\nYour support would mean more than words can express.\n\nThank you,\nLifeFlow AI Team\n(Contact: blooddonationlifeflowai@gmail.com)`;
+        const mailtoUrl = `mailto:${donor.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoUrl;
+        
+        addNotification({
+          title: 'Manual Draft Created',
+          message: `Automatic send failed (${data.error}). Manual draft created for ${donor.name}.`,
+          type: 'system'
+        });
+      }
+    } catch (error) {
+      console.error("Error calling send-email API:", error);
+      showToast('Connection error. Opening mail client...', 'info');
+      // Final fallback
+      window.location.href = `mailto:${donor.email}?subject=Urgent&body=Please help`;
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEmailDonor = (donor: Donor) => {
