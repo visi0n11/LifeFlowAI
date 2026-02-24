@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 /**
@@ -132,14 +131,9 @@ export const getAIChatResponse = async (
   }
 
   // 3. Fallback to Gemini AI
-  if (!process.env.API_KEY) {
-    const errorMsg = "API Key not configured. Please check system settings.";
-    if (onChunk) onChunk(errorMsg);
-    return errorMsg;
-  }
-  
   try {
     // Initializing with process.env.API_KEY as per guideline.
+    // Assuming API_KEY is pre-configured and valid.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const responseStream = await ai.models.generateContentStream({
       model: 'gemini-3-flash-preview',
