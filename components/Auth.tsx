@@ -22,11 +22,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
 
   const bloodTypes: BloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
+      const dbResponse = await fetch('/api/db');
+      const db = await dbResponse.json();
+      const savedUsers = db.users || [];
+
       if (mode === 'admin') {
         if (formData.email === 'admin@lifeflow.ai' && (formData.password === 'admin123' || formData.password === 'password')) {
           const admin: User = {
@@ -46,7 +50,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
       }
 
       if (mode === 'forgot') {
-        const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
         const userExists = savedUsers.some((u: any) => u.email === formData.email) || formData.email === 'admin@lifeflow.ai';
         if (userExists) {
           setResetSuccess(true);
@@ -62,7 +65,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
           return;
         }
 
-        const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
         const user = savedUsers.find((u: any) => u.email === formData.email && u.password === formData.password);
         
         if (user) {
@@ -73,7 +75,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
           setError('Invalid credentials. Please verify or create an account.');
         }
       } else {
-        const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
         if (savedUsers.some((u: any) => u.email === formData.email) || formData.email === 'admin@lifeflow.ai') {
           setError('This email is already registered in the cluster.');
           return;
@@ -84,8 +85,12 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
           ...formData
         };
         
-        savedUsers.push(newUser);
-        localStorage.setItem('lifeflow_users', JSON.stringify(savedUsers));
+        // Save to server
+        await fetch('/api/db/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newUser)
+        });
         
         const { password, ...userWithoutPassword } = newUser;
         localStorage.setItem('lifeflow_session', JSON.stringify(userWithoutPassword));

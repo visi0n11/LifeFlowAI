@@ -120,10 +120,7 @@ const App: React.FC = () => {
   };
 
   // --- Notification & Persistence States ---
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
-    const saved = localStorage.getItem('lifeflow_notifications');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>(() => {
     const saved = localStorage.getItem('lifeflow_notif_settings');
@@ -134,79 +131,50 @@ const App: React.FC = () => {
     };
   });
 
-  const [donors, setDonors] = useState<Donor[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_donors');
-      return saved ? JSON.parse(saved) : initialDonors;
-    } catch (e) {
-      return initialDonors;
-    }
-  });
-  
-  const [recipients, setRecipients] = useState<Recipient[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_recipients');
-      return saved ? JSON.parse(saved) : initialRecipients;
-    } catch (e) {
-      return initialRecipients;
-    }
-  });
-  
-  const [bags, setBags] = useState<BloodBag[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_bags');
-      return saved ? JSON.parse(saved) : initialBags;
-    } catch (e) {
-      return initialBags;
-    }
-  });
+  const [donors, setDonors] = useState<Donor[]>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [bags, setBags] = useState<BloodBag[]>([]);
+  const [resourceDonations, setResourceDonations] = useState<ResourceDonation[]>([]);
 
-  const [resourceDonations, setResourceDonations] = useState<ResourceDonation[]>(() => {
+  // --- API Sync Helpers ---
+  const fetchDb = async () => {
     try {
-      const saved = localStorage.getItem('lifeflow_resources');
-      return saved ? JSON.parse(saved) : initialResourceDonations;
-    } catch (e) {
-      return initialResourceDonations;
+      const response = await fetch('/api/db');
+      const data = await response.json();
+      setDonors(data.donors || []);
+      setRecipients(data.recipients || []);
+      setBags(data.bags || []);
+      setResourceDonations(data.resources || []);
+      setNotifications(data.notifications || []);
+    } catch (error) {
+      console.error("Failed to fetch database:", error);
+      setDbStatus('error');
     }
-  });
+  };
+
+  const syncCollection = async (collection: string, data: any) => {
+    try {
+      await fetch('/api/db/sync-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collection, data })
+      });
+    } catch (error) {
+      console.error(`Failed to sync ${collection}:`, error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDb();
+  }, []);
 
   // --- Real-time Synchronizer (Cross-Tab) ---
   useEffect(() => {
     const handleStorageUpdate = (e: StorageEvent) => {
       if (!e.newValue) return;
 
-      let updated = false;
-      const parsedData = JSON.parse(e.newValue);
-
-      switch (e.key) {
-        case 'lifeflow_donors':
-          setDonors(parsedData);
-          updated = true;
-          break;
-        case 'lifeflow_recipients':
-          setRecipients(parsedData);
-          updated = true;
-          break;
-        case 'lifeflow_bags':
-          setBags(parsedData);
-          updated = true;
-          break;
-        case 'lifeflow_resources':
-          setResourceDonations(parsedData);
-          updated = true;
-          break;
-        case 'lifeflow_notifications':
-          setNotifications(parsedData);
-          break;
-        case 'lifeflow_session':
-          setCurrentUser(parsedData);
-          break;
-      }
-
-      if (updated) {
-        setIsSyncingExternally(true);
-        setTimeout(() => setIsSyncingExternally(false), 2000);
-        showToast("Directory synced with network update", 'info');
+      if (e.key === 'lifeflow_session') {
+        setCurrentUser(JSON.parse(e.newValue));
       }
     };
 
@@ -218,7 +186,7 @@ const App: React.FC = () => {
       setTimeout(() => {
         addNotification({
           title: 'System Ready',
-          message: 'LifeFlow AI Cluster is online. Some external sync features are in simulation mode.',
+          message: 'LifeFlow AI Cluster is online. Data is now stored permanently on the server.',
           type: 'system'
         });
         sessionStorage.setItem('lifeflow_init_notif', 'true');
@@ -253,7 +221,7 @@ const App: React.FC = () => {
     };
     setNotifications(prev => {
       const next = [newNotif, ...prev].slice(0, 20);
-      localStorage.setItem('lifeflow_notifications', JSON.stringify(next));
+      syncCollection('notifications', next);
       return next;
     });
   };
@@ -272,15 +240,60 @@ const App: React.FC = () => {
   const [newBag, setNewBag] = useState({ type: 'A+' as BloodType, volume: '450ml' });
   const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
 
+  // --- Data Sync with Server ---
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/db');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.donors) setDonors(data.donors);
+          if (data.recipients) setRecipients(data.recipients);
+          if (data.bags) setBags(data.bags);
+          if (data.resources) setResourceDonations(data.resources);
+          if (data.notifications) setNotifications(data.notifications);
+          setDbStatus('connected');
+        }
+      } catch (error) {
+        console.error("Failed to fetch data from server:", error);
+        setDbStatus('error');
+      }
+    };
+    fetchData();
+  }, []);
+
+  const syncWithServer = async (collection: string, data: any) => {
+    try {
+      await fetch('/api/db/sync-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collection, data })
+      });
+    } catch (error) {
+      console.error(`Failed to sync ${collection} with server:`, error);
+    }
+  };
+
+  useEffect(() => {
+    setDbStatus('syncing');
+    
+    // Local storage fallback
     localStorage.setItem('lifeflow_donors', JSON.stringify(donors));
     localStorage.setItem('lifeflow_recipients', JSON.stringify(recipients));
     localStorage.setItem('lifeflow_bags', JSON.stringify(bags));
     localStorage.setItem('lifeflow_resources', JSON.stringify(resourceDonations));
-    setDbStatus('syncing');
+    localStorage.setItem('lifeflow_notifications', JSON.stringify(notifications));
+
+    // Server sync
+    syncWithServer('donors', donors);
+    syncWithServer('recipients', recipients);
+    syncWithServer('bags', bags);
+    syncWithServer('resources', resourceDonations);
+    syncWithServer('notifications', notifications);
+
     const timer = setTimeout(() => setDbStatus('connected'), 600);
     return () => clearTimeout(timer);
-  }, [donors, recipients, bags, resourceDonations]);
+  }, [donors, recipients, bags, resourceDonations, notifications]);
 
   useEffect(() => {
     localStorage.setItem('lifeflow_notif_settings', JSON.stringify(notifSettings));
@@ -368,14 +381,18 @@ const App: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
     if (editingDonorId) {
-      setDonors(prev => prev.map(d => d.id === editingDonorId ? {
-        ...d,
+      const updatedDonor = {
         name: newDonor.name,
         age: parseInt(newDonor.age) || 18,
         bloodType: newDonor.bloodType,
         contact: newDonor.contact,
         email: newDonor.email
-      } : d));
+      };
+      setDonors(prev => {
+        const next = prev.map(d => d.id === editingDonorId ? { ...d, ...updatedDonor } : d);
+        syncCollection('donors', next);
+        return next;
+      });
       showToast(`Donor ${newDonor.name} updated successfully`);
     } else {
       const donor: Donor = {
@@ -387,7 +404,11 @@ const App: React.FC = () => {
         email: newDonor.email,
         lastDonation: new Date().toISOString().split('T')[0]
       };
-      setDonors(prev => [donor, ...prev]);
+      setDonors(prev => {
+        const next = [donor, ...prev];
+        syncCollection('donors', next);
+        return next;
+      });
       showToast(`Donor ${donor.name} registered successfully`);
     }
 
@@ -401,7 +422,11 @@ const App: React.FC = () => {
     const donor = donors.find(d => d.id === id);
     if (!donor) return;
     if (window.confirm(`Are you sure you want to remove ${donor.name} from the directory?`)) {
-      setDonors(prev => prev.filter(d => d.id !== id));
+      setDonors(prev => {
+        const next = prev.filter(d => d.id !== id);
+        syncCollection('donors', next);
+        return next;
+      });
       showToast(`Donor ${donor.name} removed`, 'info');
     }
   };
@@ -441,7 +466,11 @@ const App: React.FC = () => {
         email: newRequest.email || "system@lifeflow.ai",
         condition: newRequest.condition || "Emergency"
       };
-      setRecipients(prev => [request, ...prev]);
+      setRecipients(prev => {
+        const next = [request, ...prev];
+        syncCollection('recipients', next);
+        return next;
+      });
       const compatibleTypes = recipientCompatibility[request.bloodType] || [];
       const possibleDonors = donors.filter(d => compatibleTypes.includes(d.bloodType));
       
@@ -485,7 +514,11 @@ const App: React.FC = () => {
       donationDate: today.toISOString().split('T')[0],
       expiryDate: expiry.toISOString().split('T')[0]
     };
-    setBags(prev => [bag, ...prev]);
+    setBags(prev => {
+      const next = [bag, ...prev];
+      syncCollection('bags', next);
+      return next;
+    });
     setIsBagModalOpen(false);
     setIsSaving(false);
     showToast(`Blood bag ${bag.type} added to inventory`);
@@ -509,7 +542,11 @@ const App: React.FC = () => {
       details: newResource.details,
       date: new Date().toISOString().split('T')[0]
     };
-    setResourceDonations(prev => [donation, ...prev]);
+    setResourceDonations(prev => {
+      const next = [donation, ...prev];
+      syncCollection('resources', next);
+      return next;
+    });
     setIsResourceModalOpen(false);
     setIsSaving(false);
     setPaymentVerified(false);
@@ -520,7 +557,11 @@ const App: React.FC = () => {
   const handleDispatchBag = (id: number) => {
     const bag = bags.find(b => b.id === id);
     if (!bag) return;
-    setBags(prev => prev.filter(b => b.id !== id));
+    setBags(prev => {
+      const next = prev.filter(b => b.id !== id);
+      syncCollection('bags', next);
+      return next;
+    });
     showToast(`Unit ${bag.type} dispatched successfully`, 'info');
   };
 
@@ -634,14 +675,14 @@ const App: React.FC = () => {
   const markAllRead = () => {
     setNotifications(prev => {
       const next = prev.map(n => ({ ...n, read: true }));
-      localStorage.setItem('lifeflow_notifications', JSON.stringify(next));
+      syncCollection('notifications', next);
       return next;
     });
   };
 
   const clearNotifications = () => {
     setNotifications([]);
-    localStorage.removeItem('lifeflow_notifications');
+    syncCollection('notifications', []);
   };
 
   const navItems = [
