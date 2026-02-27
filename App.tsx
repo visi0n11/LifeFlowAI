@@ -137,22 +137,7 @@ const App: React.FC = () => {
   const [resourceDonations, setResourceDonations] = useState<ResourceDonation[]>([]);
 
   // --- API Sync Helpers ---
-  const fetchDb = async () => {
-    try {
-      const response = await fetch('/api/db');
-      const data = await response.json();
-      setDonors(data.donors || []);
-      setRecipients(data.recipients || []);
-      setBags(data.bags || []);
-      setResourceDonations(data.resources || []);
-      setNotifications(data.notifications || []);
-    } catch (error) {
-      console.error("Failed to fetch database:", error);
-      setDbStatus('error');
-    }
-  };
-
-  const syncCollection = async (collection: string, data: any) => {
+  const syncWithServer = async (collection: string, data: any) => {
     try {
       await fetch('/api/db/sync-all', {
         method: 'POST',
@@ -160,12 +145,30 @@ const App: React.FC = () => {
         body: JSON.stringify({ collection, data })
       });
     } catch (error) {
-      console.error(`Failed to sync ${collection}:`, error);
+      console.error(`Failed to sync ${collection} with server:`, error);
     }
   };
 
+  // --- Initial Data Fetch ---
   useEffect(() => {
-    fetchDb();
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/db');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.donors) setDonors(data.donors);
+          if (data.recipients) setRecipients(data.recipients);
+          if (data.bags) setBags(data.bags);
+          if (data.resources) setResourceDonations(data.resources);
+          if (data.notifications) setNotifications(data.notifications);
+          setDbStatus('connected');
+        }
+      } catch (error) {
+        console.error("Failed to fetch data from server:", error);
+        setDbStatus('error');
+      }
+    };
+    fetchData();
   }, []);
 
   // --- Real-time Synchronizer (Cross-Tab) ---
@@ -221,7 +224,6 @@ const App: React.FC = () => {
     };
     setNotifications(prev => {
       const next = [newNotif, ...prev].slice(0, 20);
-      syncCollection('notifications', next);
       return next;
     });
   };
@@ -240,41 +242,10 @@ const App: React.FC = () => {
   const [newBag, setNewBag] = useState({ type: 'A+' as BloodType, volume: '450ml' });
   const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
 
-  // --- Data Sync with Server ---
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/db');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.donors) setDonors(data.donors);
-          if (data.recipients) setRecipients(data.recipients);
-          if (data.bags) setBags(data.bags);
-          if (data.resources) setResourceDonations(data.resources);
-          if (data.notifications) setNotifications(data.notifications);
-          setDbStatus('connected');
-        }
-      } catch (error) {
-        console.error("Failed to fetch data from server:", error);
-        setDbStatus('error');
-      }
-    };
-    fetchData();
-  }, []);
+    // Skip sync on initial empty state to avoid overwriting server data
+    if (donors.length === 0 && recipients.length === 0 && bags.length === 0) return;
 
-  const syncWithServer = async (collection: string, data: any) => {
-    try {
-      await fetch('/api/db/sync-all', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collection, data })
-      });
-    } catch (error) {
-      console.error(`Failed to sync ${collection} with server:`, error);
-    }
-  };
-
-  useEffect(() => {
     setDbStatus('syncing');
     
     // Local storage fallback
@@ -390,7 +361,6 @@ const App: React.FC = () => {
       };
       setDonors(prev => {
         const next = prev.map(d => d.id === editingDonorId ? { ...d, ...updatedDonor } : d);
-        syncCollection('donors', next);
         return next;
       });
       showToast(`Donor ${newDonor.name} updated successfully`);
@@ -406,7 +376,6 @@ const App: React.FC = () => {
       };
       setDonors(prev => {
         const next = [donor, ...prev];
-        syncCollection('donors', next);
         return next;
       });
       showToast(`Donor ${donor.name} registered successfully`);
@@ -424,7 +393,6 @@ const App: React.FC = () => {
     if (window.confirm(`Are you sure you want to remove ${donor.name} from the directory?`)) {
       setDonors(prev => {
         const next = prev.filter(d => d.id !== id);
-        syncCollection('donors', next);
         return next;
       });
       showToast(`Donor ${donor.name} removed`, 'info');
@@ -468,7 +436,6 @@ const App: React.FC = () => {
       };
       setRecipients(prev => {
         const next = [request, ...prev];
-        syncCollection('recipients', next);
         return next;
       });
       const compatibleTypes = recipientCompatibility[request.bloodType] || [];
@@ -516,7 +483,6 @@ const App: React.FC = () => {
     };
     setBags(prev => {
       const next = [bag, ...prev];
-      syncCollection('bags', next);
       return next;
     });
     setIsBagModalOpen(false);
@@ -544,7 +510,6 @@ const App: React.FC = () => {
     };
     setResourceDonations(prev => {
       const next = [donation, ...prev];
-      syncCollection('resources', next);
       return next;
     });
     setIsResourceModalOpen(false);
@@ -559,7 +524,6 @@ const App: React.FC = () => {
     if (!bag) return;
     setBags(prev => {
       const next = prev.filter(b => b.id !== id);
-      syncCollection('bags', next);
       return next;
     });
     showToast(`Unit ${bag.type} dispatched successfully`, 'info');
@@ -675,14 +639,12 @@ const App: React.FC = () => {
   const markAllRead = () => {
     setNotifications(prev => {
       const next = prev.map(n => ({ ...n, read: true }));
-      syncCollection('notifications', next);
       return next;
     });
   };
 
   const clearNotifications = () => {
     setNotifications([]);
-    syncCollection('notifications', []);
   };
 
   const navItems = [

@@ -27,10 +27,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
     setError('');
 
     try {
-      const dbResponse = await fetch('/api/db');
-      const db = await dbResponse.json();
-      const savedUsers = db.users || [];
-
       if (mode === 'admin') {
         if (formData.email === 'admin@lifeflow.ai' && (formData.password === 'admin123' || formData.password === 'password')) {
           const admin: User = {
@@ -50,11 +46,17 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
       }
 
       if (mode === 'forgot') {
-        const userExists = savedUsers.some((u: any) => u.email === formData.email) || formData.email === 'admin@lifeflow.ai';
-        if (userExists) {
+        const response = await fetch('/api/auth/forgot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email })
+        });
+        
+        if (response.ok) {
           setResetSuccess(true);
         } else {
-          setError('This email is not registered in the cluster.');
+          const data = await response.json();
+          setError(data.error || 'This email is not registered in the cluster.');
         }
         return;
       }
@@ -65,36 +67,38 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
           return;
         }
 
-        const user = savedUsers.find((u: any) => u.email === formData.email && u.password === formData.password);
-        
-        if (user) {
-          const { password, ...userWithoutPassword } = user;
-          localStorage.setItem('lifeflow_session', JSON.stringify(userWithoutPassword));
-          onLogin(userWithoutPassword);
-        } else {
-          setError('Invalid credentials. Please verify or create an account.');
-        }
-      } else {
-        if (savedUsers.some((u: any) => u.email === formData.email) || formData.email === 'admin@lifeflow.ai') {
-          setError('This email is already registered in the cluster.');
-          return;
-        }
-
-        const newUser = {
-          id: Math.random().toString(36).substr(2, 9),
-          ...formData
-        };
-        
-        // Save to server
-        await fetch('/api/db/users', {
+        const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newUser)
+          body: JSON.stringify({ email: formData.email, password: formData.password })
         });
         
-        const { password, ...userWithoutPassword } = newUser;
-        localStorage.setItem('lifeflow_session', JSON.stringify(userWithoutPassword));
-        onLogin(userWithoutPassword as User);
+        if (response.ok) {
+          const user = await response.json();
+          localStorage.setItem('lifeflow_session', JSON.stringify(user));
+          onLogin(user);
+        } else {
+          const data = await response.json();
+          setError(data.error || 'Invalid credentials. Please verify or create an account.');
+        }
+      } else {
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: Math.random().toString(36).substr(2, 9),
+            ...formData
+          })
+        });
+        
+        if (response.ok) {
+          const user = await response.json();
+          localStorage.setItem('lifeflow_session', JSON.stringify(user));
+          onLogin(user);
+        } else {
+          const data = await response.json();
+          setError(data.error || 'This email is already registered in the cluster.');
+        }
       }
     } catch (err) {
       setError('Connection to auth service failed.');
