@@ -136,8 +136,11 @@ const App: React.FC = () => {
   const [bags, setBags] = useState<BloodBag[]>([]);
   const [resourceDonations, setResourceDonations] = useState<ResourceDonation[]>([]);
 
+  const [isLoaded, setIsLoaded] = useState(false);
+
   // --- API Sync Helpers ---
   const syncWithServer = async (collection: string, data: any) => {
+    if (!isLoaded) return; // Don't sync until initial data is loaded
     try {
       await fetch('/api/db/sync-all', {
         method: 'POST',
@@ -162,6 +165,7 @@ const App: React.FC = () => {
           if (data.resources) setResourceDonations(data.resources);
           if (data.notifications) setNotifications(data.notifications);
           setDbStatus('connected');
+          setIsLoaded(true);
         }
       } catch (error) {
         console.error("Failed to fetch data from server:", error);
@@ -243,8 +247,8 @@ const App: React.FC = () => {
   const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
 
   useEffect(() => {
-    // Skip sync on initial empty state to avoid overwriting server data
-    if (donors.length === 0 && recipients.length === 0 && bags.length === 0) return;
+    // Skip sync until initial data is loaded to avoid overwriting server data
+    if (!isLoaded) return;
 
     setDbStatus('syncing');
     
