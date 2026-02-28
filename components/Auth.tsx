@@ -22,7 +22,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
 
   const bloodTypes: BloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -46,12 +46,17 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
       }
 
       if (mode === 'forgot') {
-        const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
-        const userExists = savedUsers.some((u: any) => u.email === formData.email) || formData.email === 'admin@lifeflow.ai';
-        if (userExists) {
+        const response = await fetch('/api/auth/forgot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email })
+        });
+        
+        if (response.ok) {
           setResetSuccess(true);
         } else {
-          setError('This email is not registered in the cluster.');
+          const data = await response.json();
+          setError(data.error || 'This email is not registered in the cluster.');
         }
         return;
       }
@@ -62,38 +67,42 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
           return;
         }
 
-        const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
-        const user = savedUsers.find((u: any) => u.email === formData.email && u.password === formData.password);
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email, password: formData.password })
+        });
         
-        if (user) {
-          const { password, ...userWithoutPassword } = user;
-          localStorage.setItem('lifeflow_session', JSON.stringify(userWithoutPassword));
-          onLogin(userWithoutPassword);
+        if (response.ok) {
+          const user = await response.json();
+          localStorage.setItem('lifeflow_session', JSON.stringify(user));
+          onLogin(user);
         } else {
-          setError('Invalid credentials. Please verify or create an account.');
+          const data = await response.json();
+          setError(data.error || 'Invalid credentials. Please verify or create an account.');
         }
       } else {
-        const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
-        if (savedUsers.some((u: any) => u.email === formData.email) || formData.email === 'admin@lifeflow.ai') {
-          setError('This email is already registered in the cluster.');
-          return;
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: Math.random().toString(36).substr(2, 9),
+            ...formData
+          })
+        });
+        
+        if (response.ok) {
+          const user = await response.json();
+          localStorage.setItem('lifeflow_session', JSON.stringify(user));
+          onLogin(user);
+        } else {
+          const data = await response.json();
+          setError(data.error || 'This email is already registered in the cluster.');
         }
-
-        const newUser = {
-          id: Math.random().toString(36).substr(2, 9),
-          ...formData
-        };
-        
-        savedUsers.push(newUser);
-        localStorage.setItem('lifeflow_users', JSON.stringify(savedUsers));
-        
-        const { password, ...userWithoutPassword } = newUser;
-        localStorage.setItem('lifeflow_session', JSON.stringify(userWithoutPassword));
-        onLogin(userWithoutPassword as User);
       }
-    } catch (err) {
-      setError('Connection to auth service failed.');
-      console.error(err);
+    } catch (err: any) {
+      setError(`Auth service error: ${err.message || 'Unknown connection failure'}`);
+      console.error('Auth error:', err);
     }
   };
 
