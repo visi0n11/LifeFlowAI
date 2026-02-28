@@ -73,13 +73,22 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
           body: JSON.stringify({ email: formData.email, password: formData.password })
         });
         
+        const contentType = response.headers.get("content-type");
         if (response.ok) {
-          const user = await response.json();
-          localStorage.setItem('lifeflow_session', JSON.stringify(user));
-          onLogin(user);
+          if (contentType && contentType.includes("application/json")) {
+            const user = await response.json();
+            localStorage.setItem('lifeflow_session', JSON.stringify(user));
+            onLogin(user);
+          } else {
+            throw new Error("Server returned non-JSON response. Please check server logs.");
+          }
         } else {
-          const data = await response.json();
-          setError(data.error || 'Invalid credentials. Please verify or create an account.');
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            setError(data.error || 'Invalid credentials. Please verify or create an account.');
+          } else {
+            setError(`Auth service error: ${response.status} ${response.statusText}`);
+          }
         }
       } else {
         const response = await fetch('/api/auth/signup', {
@@ -91,18 +100,27 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
           })
         });
         
+        const contentType = response.headers.get("content-type");
         if (response.ok) {
-          const user = await response.json();
-          localStorage.setItem('lifeflow_session', JSON.stringify(user));
-          onLogin(user);
+          if (contentType && contentType.includes("application/json")) {
+            const user = await response.json();
+            localStorage.setItem('lifeflow_session', JSON.stringify(user));
+            onLogin(user);
+          } else {
+            throw new Error("Server returned non-JSON response. Please check server logs.");
+          }
         } else {
-          const data = await response.json();
-          setError(data.error || 'This email is already registered in the cluster.');
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            setError(data.error || 'This email is already registered in the cluster.');
+          } else {
+            setError(`Registration error: ${response.status} ${response.statusText}`);
+          }
         }
       }
-    } catch (err: any) {
-      setError(`Auth service error: ${err.message || 'Unknown connection failure'}`);
-      console.error('Auth error:', err);
+    } catch (err) {
+      setError('Connection to auth service failed.');
+      console.error(err);
     }
   };
 

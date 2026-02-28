@@ -4,7 +4,6 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import fs from "fs/promises";
 import path from "path";
-import cors from "cors";
 
 dotenv.config();
 
@@ -64,13 +63,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(cors());
   app.use(express.json());
-
-  // Health Check
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
-  });
 
   // Database API Routes
   app.get("/api/db", async (req: Request, res: Response) => {
@@ -137,66 +130,49 @@ async function startServer() {
 
   // Auth Endpoints
   app.post("/api/auth/login", async (req: Request, res: Response) => {
-    try {
-      const { email, password } = req.body;
-      console.log(`Login attempt for: ${email}`);
-      const db = await readDb() as any;
-      if (!db.users) {
-        console.error("Database users collection missing");
-        return res.status(500).json({ error: "Database configuration error" });
-      }
-      const user = db.users.find((u: any) => u.email === email && u.password === password);
-      if (user) {
-        console.log(`Login successful for: ${email}`);
-        const { password: _, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
-      } else {
-        console.log(`Login failed for: ${email}`);
-        res.status(401).json({ error: "Invalid credentials" });
-      }
-    } catch (error: any) {
-      console.error("Login error:", error);
-      res.status(500).json({ error: "Internal server error during login", details: error.message });
+    console.log("Login request received:", req.body.email);
+    const { email, password } = req.body;
+    const db = await readDb() as any;
+    const user = db.users.find((u: any) => u.email === email && u.password === password);
+    if (user) {
+      console.log("Login successful for:", email);
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } else {
+      console.log("Login failed for:", email);
+      res.status(401).json({ error: "Invalid credentials" });
     }
   });
 
   app.post("/api/auth/signup", async (req: Request, res: Response) => {
-    try {
-      const userData = req.body;
-      console.log(`Signup attempt for: ${userData.email}`);
-      const db = await readDb() as any;
-      if (!db.users) db.users = [];
-      if (db.users.some((u: any) => u.email === userData.email)) {
-        console.log(`Signup failed: User already exists - ${userData.email}`);
-        return res.status(400).json({ error: "User already exists" });
-      }
-      db.users.push(userData);
-      await writeDb(db);
-      console.log(`Signup successful for: ${userData.email}`);
-      const { password: _, ...userWithoutPassword } = userData;
-      res.json(userWithoutPassword);
-    } catch (error: any) {
-      console.error("Signup error:", error);
-      res.status(500).json({ error: "Internal server error during signup", details: error.message });
+    console.log("Signup request received:", req.body.email);
+    const userData = req.body;
+    const db = await readDb() as any;
+    if (db.users.some((u: any) => u.email === userData.email)) {
+      console.log("Signup failed: User already exists:", userData.email);
+      return res.status(400).json({ error: "User already exists" });
     }
+    db.users.push(userData);
+    await writeDb(db);
+    console.log("Signup successful for:", userData.email);
+    const { password, ...userWithoutPassword } = userData;
+    res.json(userWithoutPassword);
   });
 
   app.post("/api/auth/forgot", async (req: Request, res: Response) => {
-    try {
-      const { email } = req.body;
-      console.log(`Forgot password request for: ${email}`);
-      const db = await readDb() as any;
-      if (!db.users) db.users = [];
-      const userExists = db.users.some((u: any) => u.email === email) || email === 'admin@lifeflow.ai';
-      if (userExists) {
-        res.json({ success: true });
-      } else {
-        res.status(404).json({ error: "User not found" });
-      }
-    } catch (error: any) {
-      console.error("Forgot password error:", error);
-      res.status(500).json({ error: "Internal server error during password recovery" });
+    const { email } = req.body;
+    const db = await readDb() as any;
+    const userExists = db.users.some((u: any) => u.email === email) || email === 'admin@lifeflow.ai';
+    if (userExists) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: "User not found" });
     }
+  });
+
+  // Catch-all for undefined API routes
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ error: `API route ${req.method} ${req.url} not found` });
   });
 
   // API Route for sending urgent emails
@@ -265,8 +241,7 @@ LifeFlow AI Team
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 

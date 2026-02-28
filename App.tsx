@@ -170,15 +170,11 @@ const App: React.FC = () => {
           if (data.resources) setResourceDonations(data.resources);
           if (data.notifications) setNotifications(data.notifications);
           setDbStatus('connected');
-          setSystemHealth('optimal');
           setIsLoaded(true);
-        } else {
-          setSystemHealth('degraded');
         }
       } catch (error) {
         console.error("Failed to fetch data from server:", error);
         setDbStatus('error');
-        setSystemHealth('offline');
       }
     };
     fetchData();
@@ -581,7 +577,11 @@ const App: React.FC = () => {
         })
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      }
 
       if (response.ok) {
         addNotification({
@@ -592,7 +592,7 @@ const App: React.FC = () => {
         showToast(`Urgent email sent to ${donor.name}`, 'success');
       } else {
         // Fallback to mailto if server fails (e.g. missing credentials)
-        console.warn("Automatic send failed, falling back to mailto:", data.error);
+        console.warn("Automatic send failed, falling back to mailto:", data?.error);
         const subject = "URGENT: Life-Saving Blood Donation Needed";
         const body = `Hello,\n\nWe urgently need blood for a patient in critical condition. Your donation could save a life today. If you are available and eligible to donate, please consider helping.\n\nYour support would mean more than words can express.\n\nThank you,\nLifeFlow AI Team\n(Contact: blooddonationlifeflowai@gmail.com)`;
         const mailtoUrl = `mailto:${donor.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -600,7 +600,7 @@ const App: React.FC = () => {
         
         addNotification({
           title: 'Manual Draft Created',
-          message: `Automatic send failed (${data.error}). Manual draft created for ${donor.name}.`,
+          message: `Automatic send failed (${data?.error || 'Unknown error'}). Manual draft created for ${donor.name}.`,
           type: 'system'
         });
       }
