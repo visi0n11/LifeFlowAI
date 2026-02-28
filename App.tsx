@@ -74,8 +74,8 @@ const initialDonors: Donor[] = [
 ];
 
 const initialRecipients: Recipient[] = [
-  { id: 1, name: "Sahil Mane", age: 29, bloodType: "O+", contact: "9988776655", email: "sahil@example.com", condition: "Surgery Recovery" },
-  { id: 2, name: "Priya Patil", age: 34, bloodType: "AB+", contact: "9988776644", email: "priya@example.com", condition: "Anemia Treatment" },
+  { id: 1, name: "Sahil Mane", age: 29, bloodType: "O+", contact: "9988776655", condition: "Surgery Recovery" },
+  { id: 2, name: "Priya Patil", age: 34, bloodType: "AB+", contact: "9988776644", condition: "Anemia Treatment" },
 ];
 
 const initialBags: BloodBag[] = [
@@ -247,7 +247,7 @@ const App: React.FC = () => {
   const [paymentVerified, setPaymentVerified] = useState(false);
 
   const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '', email: '' });
-  const [newRequest, setNewRequest] = useState({ name: '', bloodType: '' as BloodType | '', condition: '', contact: '', email: '' });
+  const [newRequest, setNewRequest] = useState({ name: '', bloodType: '' as BloodType | '', condition: '', contact: '' });
   const [newBag, setNewBag] = useState({ type: 'A+' as BloodType, volume: '450ml' });
   const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
 
@@ -440,7 +440,6 @@ const App: React.FC = () => {
         age: 30,
         bloodType: newRequest.bloodType as BloodType,
         contact: newRequest.contact || "System Generated",
-        email: newRequest.email || "system@lifeflow.ai",
         condition: newRequest.condition || "Emergency"
       };
       setRecipients(prev => {
@@ -1012,10 +1011,6 @@ const App: React.FC = () => {
                     <div>
                       <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Patient Name</label>
                       <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="Enter patient name" value={newRequest.name} onChange={e => setNewRequest({...newRequest, name: e.target.value})} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Contact Email</label>
-                      <input type="email" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="Enter contact email" value={newRequest.email} onChange={e => setNewRequest({...newRequest, email: e.target.value})} />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Required Type</label>

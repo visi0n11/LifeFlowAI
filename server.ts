@@ -28,10 +28,10 @@ async function readDb() {
         { id: 10, name: "Anjali Nair", age: 24, bloodType: "AB-", contact: "9870000110", email: "anjali@example.com", lastDonation: "2024-03-18" },
       ],
       recipients: [
-        { id: 1, name: "Sahil Mane", age: 29, bloodType: "O+", contact: "9988776655", email: "sahil@example.com", condition: "Surgery Recovery" },
-        { id: 2, name: "Priya Patil", age: 34, bloodType: "AB+", contact: "9988776644", email: "priya@example.com", condition: "Anemia Treatment" },
-        { id: 3, name: "Rohan Deshmukh", age: 42, bloodType: "B+", contact: "9988776633", email: "rohan@example.com", condition: "Accident Trauma" },
-        { id: 4, name: "Meera Iyer", age: 27, bloodType: "A-", contact: "9988776622", email: "meera@example.com", condition: "Thalassemia" },
+        { id: 1, name: "Sahil Mane", age: 29, bloodType: "O+", contact: "9988776655", condition: "Surgery Recovery" },
+        { id: 2, name: "Priya Patil", age: 34, bloodType: "AB+", contact: "9988776644", condition: "Anemia Treatment" },
+        { id: 3, name: "Rohan Deshmukh", age: 42, bloodType: "B+", contact: "9988776633", condition: "Accident Trauma" },
+        { id: 4, name: "Meera Iyer", age: 27, bloodType: "A-", contact: "9988776622", condition: "Thalassemia" },
       ],
       bags: [
         { id: 1, type: "O+", volume: "450ml", donationDate: "2024-03-12", expiryDate: "2024-04-23" },
