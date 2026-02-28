@@ -65,6 +65,12 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Global Request Logger
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
+
   // Database API Routes
   app.get("/api/db", async (req: Request, res: Response) => {
     const db = await readDb();
