@@ -40,7 +40,12 @@ import {
   CreditCard,
   Smartphone,
   Mail,
-  AlertCircle
+  AlertCircle,
+  LayoutDashboard,
+  Calendar,
+  BarChart3,
+  Zap,
+  Maximize
 } from 'lucide-react';
 import { Auth } from './components/Auth';
 import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
@@ -816,18 +821,55 @@ const App: React.FC = () => {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-24 text-left">
               {[
-                { title: "Real-time Matching", desc: "Our AI cluster instantly connects donors with patients based on compatible blood groups.", icon: Activity },
-                { title: "Community Hub", desc: "Go beyond blood by donating food, clothes, or funds to those in need.", icon: Gift },
-                { title: "Secure Access", desc: "All donors and recipients are verified via our identity management system.", icon: ShieldCheck }
+                { 
+                  title: "Real-Time Donor Matching", 
+                  desc: "Uses AI algorithms to instantly match donors with recipients based on blood type, location, and urgency.", 
+                  icon: Zap 
+                },
+                { 
+                  title: "Emergency Alerts", 
+                  desc: "Sends instant notifications to nearby donors and medical organizations during emergencies.", 
+                  icon: Bell 
+                },
+                { 
+                  title: "User-Friendly Dashboard", 
+                  desc: "Easy-to-use interface for donors, recipients, and administrators to track donations and requests.", 
+                  icon: LayoutDashboard 
+                },
+                { 
+                  title: "Secure Data Management", 
+                  desc: "Stores donor and recipient information securely with role-based access control.", 
+                  icon: ShieldCheck 
+                },
+                { 
+                  title: "Automated Scheduling", 
+                  desc: "Helps donors schedule blood donation appointments and sends reminders automatically.", 
+                  icon: Calendar 
+                },
+                { 
+                  title: "Analytics & Reports", 
+                  desc: "Tracks donation trends, donor activity, and emergency response times for better decision-making.", 
+                  icon: BarChart3 
+                },
+                { 
+                  title: "Scalable & Accessible", 
+                  desc: "Web-based platform accessible from multiple devices, designed to handle growing user data efficiently.", 
+                  icon: Globe 
+                },
+                { 
+                  title: "Community Resources", 
+                  desc: "Go beyond blood by donating food, clothes, or funds to those in need.", 
+                  icon: Gift 
+                }
               ].map((feature, i) => (
-                <div key={i} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6">
-                    <feature.icon className="w-6 h-6" />
+                <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+                  <div className="w-10 h-10 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4">
+                    <feature.icon className="w-5 h-5" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">{feature.title}</h3>
-                  <p className="text-slate-500 text-sm leading-relaxed">{feature.desc}</p>
+                  <h3 className="text-base font-bold text-slate-900 mb-2 leading-tight">{feature.title}</h3>
+                  <p className="text-slate-500 text-xs leading-relaxed">{feature.desc}</p>
                 </div>
               ))}
             </div>
