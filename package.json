@@ -1,38 +1,22 @@
+
 {
   "name": "lifeflow-ai",
   "version": "1.0.0",
   "description": "Smart Blood Bank Management System",
   "main": "index.tsx",
   "scripts": {
-    "dev": "tsx server.ts",
-    "start": "tsx server.ts",
+    "dev": "vite --port 3001 --host",
+    "start": "vite --port 3001 --host",
     "build": "vite build",
-    "preview": "vite preview --port 3000",
-    "lint": "tsc --noEmit"
+    "preview": "vite preview --port 3001"
   },
   "dependencies": {
-    "@google/genai": "1.3.0",
-    "@vitejs/plugin-react": "^4.3.4",
-    "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "firebase": "^12.9.0",
-    "fs-extra": "^11.3.3",
-    "lucide-react": "0.460.0",
-    "nodemailer": "^8.0.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "lucide-react": "0.460.0",
     "recharts": "2.15.0",
-    "tsx": "^4.21.0",
-    "vite": "^6.0.0"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.3.0",
-    "@types/nodemailer": "^7.0.11",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "typescript": "^5.9.3"
+    "@google/genai": "1.3.0",
+    "vite": "^6.0.0",
+    "@vitejs/plugin-react": "^4.3.4"
   }
 }

@@ -15,7 +15,6 @@ export interface Donor {
   age: number;
   bloodType: BloodType;
   contact: string;
-  email: string;
   lastDonation: string;
 }
 
