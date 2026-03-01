@@ -93,6 +93,7 @@ const initialResourceDonations: ResourceDonation[] = [
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'admin' | 'qr' | 'forgot'>('login');
   const [activeTab, setActiveTab] = useState('home');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -323,11 +324,12 @@ const App: React.FC = () => {
     setNotificationToast({ message, type });
   };
 
-  const requireAuth = (actionType: string, callback: () => void) => {
+  const requireAuth = (actionType: string, callback: () => void, mode: 'login' | 'signup' = 'login') => {
     if (!currentUser) {
       setPendingAction({ type: actionType });
+      setAuthMode(mode);
       setIsAuthOpen(true);
-      showToast('Registration required to continue', 'info');
+      showToast(mode === 'signup' ? 'Donor Registration required' : 'Login or Donor Registration required', 'info');
     } else {
       callback();
     }
@@ -685,6 +687,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {isAuthOpen && (
         <Auth 
+          initialMode={authMode}
           onLogin={(user) => { 
             setCurrentUser(user); 
             setIsAuthOpen(false); 
@@ -790,9 +793,12 @@ const App: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
-                <button onClick={() => setIsAuthOpen(true)} className="bg-red-600 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-100 transition-all flex items-center space-x-2">
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>Login / Join</span>
+                <button onClick={() => { setAuthMode('login'); setIsAuthOpen(true); }} className="text-slate-600 text-xs font-black uppercase tracking-widest hover:text-red-600 transition-colors px-3">
+                  Login
+                </button>
+                <button onClick={() => { setAuthMode('signup'); setIsAuthOpen(true); }} className="bg-red-600 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-100 transition-all flex items-center space-x-2">
+                  <Heart className="w-3.5 h-3.5 fill-current" />
+                  <span>Register as Donor</span>
                 </button>
               </div>
             )}
@@ -811,10 +817,10 @@ const App: React.FC = () => {
               Connect. Donate.<br /><span className="text-red-600 underline decoration-red-200 underline-offset-8">Save Lives.</span>
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Experience real-time donor matching for <strong>Vaghu, Aayan, Akash, and Shreyash</strong>. Mandatory registration ensures safety and reliable matching.
+              Experience real-time donor matching for <strong>Vaghu, Aayan, Akash, and Shreyash</strong>. Mandatory donor registration ensures safety and reliable matching.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <button onClick={() => requireAuth('donor', () => { setActiveTab('donors'); setIsDonorModalOpen(true); })} className="px-10 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center space-x-2">
+              <button onClick={() => requireAuth('donor', () => { setActiveTab('donors'); setIsDonorModalOpen(true); }, 'signup')} className="px-10 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center space-x-2">
                 {!currentUser && <Lock className="w-4 h-4" />}
                 <span>Become a Donor</span>
               </button>
@@ -883,7 +889,7 @@ const App: React.FC = () => {
           <div className="space-y-8 animate-fade-in">
             <div className="flex justify-between items-center border-b border-slate-200 pb-4">
               <h2 className="text-2xl font-bold text-slate-800">Donor Directory</h2>
-              <button onClick={() => requireAuth('donor', () => setIsDonorModalOpen(true))} className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 flex items-center space-x-2">
+              <button onClick={() => requireAuth('donor', () => setIsDonorModalOpen(true), 'signup')} className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 flex items-center space-x-2">
                 {!currentUser && <Lock className="w-4 h-4" />}
                 <Plus className="w-4 h-4" />
                 <span>Add Donor</span>

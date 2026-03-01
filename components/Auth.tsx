@@ -6,10 +6,11 @@ import { User, BloodType } from '../types';
 interface AuthProps {
   onLogin: (user: User) => void;
   onClose?: () => void;
+  initialMode?: 'login' | 'signup' | 'admin' | 'qr' | 'forgot';
 }
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
-  const [mode, setMode] = useState<'login' | 'signup' | 'admin' | 'qr' | 'forgot'>('login');
+export const Auth: React.FC<AuthProps> = ({ onLogin, onClose, initialMode = 'login' }) => {
+  const [mode, setMode] = useState<'login' | 'signup' | 'admin' | 'qr' | 'forgot'>(initialMode);
   const [formData, setFormData] = useState({ 
     name: '', 
     email: '', 
@@ -144,10 +145,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
             {mode === 'admin' ? <ShieldAlert className="w-8 h-8 text-white" /> : mode === 'qr' ? <QrCode className="w-8 h-8 text-white" /> : mode === 'forgot' ? <KeyRound className="w-8 h-8 text-white" /> : <Heart className="w-8 h-8 text-white fill-current" />}
           </div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-            {mode === 'admin' ? 'Admin Gateway' : mode === 'qr' ? 'Instant Access' : mode === 'forgot' ? 'Identity Recovery' : 'LifeFlow AI'}
+            {mode === 'admin' ? 'Admin Gateway' : mode === 'qr' ? 'Instant Access' : mode === 'forgot' ? 'Identity Recovery' : mode === 'signup' ? 'Donor Registration' : 'LifeFlow AI'}
           </h2>
           <p className="text-slate-500 text-sm mt-2 font-medium">
-            {mode === 'qr' ? 'Scan to link your health profile' : mode === 'admin' ? 'Accessing high-level cluster controls' : mode === 'login' ? 'Welcome to the blood donor network' : mode === 'forgot' ? 'Secure password reset protocol' : 'Join the life-saving movement'}
+            {mode === 'qr' ? 'Scan to link your health profile' : mode === 'admin' ? 'Accessing high-level cluster controls' : mode === 'login' ? 'Welcome to the blood donor network' : mode === 'forgot' ? 'Secure password reset protocol' : 'Join the life-saving movement as a donor'}
           </p>
         </div>
 
@@ -265,28 +266,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
             )}
 
             {mode === 'signup' && (
-              <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Cluster Role</label>
-                  <select 
-                    className="w-full px-4 py-4 bg-white/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-red-500/10 outline-none appearance-none shadow-sm cursor-pointer font-bold text-slate-700 text-sm"
-                    value={formData.role}
-                    onChange={e => setFormData({...formData, role: e.target.value as any})}
-                  >
-                    <option value="donor">Donor</option>
-                    <option value="recipient">Recipient</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Blood Type</label>
-                  <select 
-                    className="w-full px-4 py-4 bg-white/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-red-500/10 outline-none appearance-none shadow-sm cursor-pointer font-bold text-slate-700 text-sm"
-                    value={formData.bloodType}
-                    onChange={e => setFormData({...formData, bloodType: e.target.value as BloodType})}
-                  >
-                    {bloodTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
+              <div className="animate-fade-in">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Blood Type</label>
+                <select 
+                  className="w-full px-4 py-4 bg-white/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-red-500/10 outline-none appearance-none shadow-sm cursor-pointer font-bold text-slate-700 text-sm"
+                  value={formData.bloodType}
+                  onChange={e => setFormData({...formData, bloodType: e.target.value as BloodType})}
+                >
+                  {bloodTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
             )}
 
@@ -320,7 +308,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
               onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setResetSuccess(false); }}
               className="text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-red-600 transition-colors"
             >
-              {mode === 'signup' ? "Already a member? Sign in" : mode === 'forgot' ? "New? Request access" : "New? Request access"}
+              {mode === 'signup' ? "Already a member? Sign in" : mode === 'forgot' ? "New? Register as Donor" : "New? Register as Donor"}
             </button>
             <button 
               onClick={() => { setMode('qr'); setError(''); setResetSuccess(false); }}
