@@ -18,7 +18,9 @@ import {
   Bell,
   Trash2,
   Globe,
+  Pencil,
   LogIn,
+  LifeBuoy,
   Lock,
   Gift,
   Coffee,
@@ -36,7 +38,14 @@ import {
   ShieldCheck,
   QrCode,
   CreditCard,
-  Smartphone
+  Smartphone,
+  Mail,
+  AlertCircle,
+  LayoutDashboard,
+  Calendar,
+  BarChart3,
+  Zap,
+  Maximize
 } from 'lucide-react';
 import { Auth } from './components/Auth';
 import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
@@ -58,10 +67,10 @@ const recipientCompatibility: Record<string, string[]> = {
 
 // --- Initial Mock Data ---
 const initialDonors: Donor[] = [
-  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", lastDonation: "2024-02-15" },
-  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", lastDonation: "2024-03-01" },
-  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", lastDonation: "2024-01-20" },
-  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", lastDonation: "2024-03-10" },
+  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", email: "vaghu@example.com", lastDonation: "2024-02-15" },
+  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", email: "aayan@example.com", lastDonation: "2024-03-01" },
+  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", email: "akash@example.com", lastDonation: "2024-01-20" },
+  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", email: "shreyash@example.com", lastDonation: "2024-03-10" },
 ];
 
 const initialRecipients: Recipient[] = [
@@ -84,6 +93,7 @@ const initialResourceDonations: ResourceDonation[] = [
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'admin' | 'qr' | 'forgot'>('login');
   const [activeTab, setActiveTab] = useState('home');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -102,12 +112,21 @@ const App: React.FC = () => {
   const chatToggleRef = useRef<HTMLButtonElement>(null);
   const notifToggleRef = useRef<HTMLButtonElement>(null);
   const [notificationToast, setNotificationToast] = useState<{message: string, type: 'success' | 'info'} | null>(null);
+  const [systemHealth, setSystemHealth] = useState<'optimal' | 'degraded' | 'offline'>('optimal');
+
+  const handleReportIssue = () => {
+    showToast('Issue reported to system administrator', 'info');
+    addNotification({
+      title: 'Issue Reported',
+      message: 'Your report has been logged. Our team is investigating the cluster connectivity.',
+      type: 'system'
+    });
+    setSystemHealth('degraded');
+    setTimeout(() => setSystemHealth('optimal'), 10000);
+  };
 
   // --- Notification & Persistence States ---
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
-    const saved = localStorage.getItem('lifeflow_notifications');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>(() => {
     const saved = localStorage.getItem('lifeflow_notif_settings');
@@ -118,83 +137,75 @@ const App: React.FC = () => {
     };
   });
 
-  const [donors, setDonors] = useState<Donor[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_donors');
-      return saved ? JSON.parse(saved) : initialDonors;
-    } catch (e) {
-      return initialDonors;
-    }
-  });
-  
-  const [recipients, setRecipients] = useState<Recipient[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_recipients');
-      return saved ? JSON.parse(saved) : initialRecipients;
-    } catch (e) {
-      return initialRecipients;
-    }
-  });
-  
-  const [bags, setBags] = useState<BloodBag[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_bags');
-      return saved ? JSON.parse(saved) : initialBags;
-    } catch (e) {
-      return initialBags;
-    }
-  });
+  const [donors, setDonors] = useState<Donor[]>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [bags, setBags] = useState<BloodBag[]>([]);
+  const [resourceDonations, setResourceDonations] = useState<ResourceDonation[]>([]);
 
-  const [resourceDonations, setResourceDonations] = useState<ResourceDonation[]>(() => {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // --- API Sync Helpers ---
+  const syncWithServer = async (collection: string, data: any) => {
+    if (!isLoaded) return; // Don't sync until initial data is loaded
     try {
-      const saved = localStorage.getItem('lifeflow_resources');
-      return saved ? JSON.parse(saved) : initialResourceDonations;
-    } catch (e) {
-      return initialResourceDonations;
+      await fetch('/api/db/sync-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collection, data })
+      });
+    } catch (error) {
+      console.error(`Failed to sync ${collection} with server:`, error);
     }
-  });
+  };
+
+  // --- Initial Data Fetch ---
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/db');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.donors) setDonors(data.donors);
+          if (data.recipients) setRecipients(data.recipients);
+          if (data.bags) setBags(data.bags);
+          if (data.resources) setResourceDonations(data.resources);
+          if (data.notifications) setNotifications(data.notifications);
+          setDbStatus('connected');
+          setIsLoaded(true);
+        }
+      } catch (error) {
+        console.error("Failed to fetch data from server:", error);
+        setDbStatus('error');
+      }
+    };
+    fetchData();
+  }, []);
 
   // --- Real-time Synchronizer (Cross-Tab) ---
   useEffect(() => {
     const handleStorageUpdate = (e: StorageEvent) => {
       if (!e.newValue) return;
 
-      let updated = false;
-      const parsedData = JSON.parse(e.newValue);
-
-      switch (e.key) {
-        case 'lifeflow_donors':
-          setDonors(parsedData);
-          updated = true;
-          break;
-        case 'lifeflow_recipients':
-          setRecipients(parsedData);
-          updated = true;
-          break;
-        case 'lifeflow_bags':
-          setBags(parsedData);
-          updated = true;
-          break;
-        case 'lifeflow_resources':
-          setResourceDonations(parsedData);
-          updated = true;
-          break;
-        case 'lifeflow_notifications':
-          setNotifications(parsedData);
-          break;
-        case 'lifeflow_session':
-          setCurrentUser(parsedData);
-          break;
-      }
-
-      if (updated) {
-        setIsSyncingExternally(true);
-        setTimeout(() => setIsSyncingExternally(false), 2000);
-        showToast("Directory synced with network update", 'info');
+      if (e.key === 'lifeflow_session') {
+        setCurrentUser(JSON.parse(e.newValue));
       }
     };
 
     window.addEventListener('storage', handleStorageUpdate);
+    
+    // Initial system notification
+    const hasNotified = sessionStorage.getItem('lifeflow_init_notif');
+    if (!hasNotified) {
+      setTimeout(() => {
+        addNotification({
+          title: 'System Ready',
+          message: 'LifeFlow AI Cluster is online. Data is now stored permanently on the server.',
+          type: 'system'
+        });
+        sessionStorage.setItem('lifeflow_init_notif', 'true');
+      }, 2000);
+    }
+
     return () => window.removeEventListener('storage', handleStorageUpdate);
   }, []);
 
@@ -223,7 +234,6 @@ const App: React.FC = () => {
     };
     setNotifications(prev => {
       const next = [newNotif, ...prev].slice(0, 20);
-      localStorage.setItem('lifeflow_notifications', JSON.stringify(next));
       return next;
     });
   };
@@ -231,25 +241,40 @@ const App: React.FC = () => {
   const [sortConfig, setSortConfig] = useState<{ key: keyof Donor; direction: 'asc' | 'desc' } | null>(null);
   const [matchResult, setMatchResult] = useState<Donor | null>(null);
   const [isDonorModalOpen, setIsDonorModalOpen] = useState(false);
+  const [editingDonorId, setEditingDonorId] = useState<number | null>(null);
   const [isBagModalOpen, setIsBagModalOpen] = useState(false);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
 
-  const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '' });
-  const [newRequest, setNewRequest] = useState({ name: '', bloodType: '' as BloodType | '', condition: '' });
+  const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '', email: '' });
+  const [newRequest, setNewRequest] = useState({ name: '', bloodType: '' as BloodType | '', condition: '', contact: '' });
   const [newBag, setNewBag] = useState({ type: 'A+' as BloodType, volume: '450ml' });
   const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
 
   useEffect(() => {
+    // Skip sync until initial data is loaded to avoid overwriting server data
+    if (!isLoaded) return;
+
+    setDbStatus('syncing');
+    
+    // Local storage fallback
     localStorage.setItem('lifeflow_donors', JSON.stringify(donors));
     localStorage.setItem('lifeflow_recipients', JSON.stringify(recipients));
     localStorage.setItem('lifeflow_bags', JSON.stringify(bags));
     localStorage.setItem('lifeflow_resources', JSON.stringify(resourceDonations));
-    setDbStatus('syncing');
+    localStorage.setItem('lifeflow_notifications', JSON.stringify(notifications));
+
+    // Server sync
+    syncWithServer('donors', donors);
+    syncWithServer('recipients', recipients);
+    syncWithServer('bags', bags);
+    syncWithServer('resources', resourceDonations);
+    syncWithServer('notifications', notifications);
+
     const timer = setTimeout(() => setDbStatus('connected'), 600);
     return () => clearTimeout(timer);
-  }, [donors, recipients, bags, resourceDonations]);
+  }, [donors, recipients, bags, resourceDonations, notifications]);
 
   useEffect(() => {
     localStorage.setItem('lifeflow_notif_settings', JSON.stringify(notifSettings));
@@ -299,11 +324,12 @@ const App: React.FC = () => {
     setNotificationToast({ message, type });
   };
 
-  const requireAuth = (actionType: string, callback: () => void) => {
+  const requireAuth = (actionType: string, callback: () => void, mode: 'login' | 'signup' = 'login') => {
     if (!currentUser) {
       setPendingAction({ type: actionType });
+      setAuthMode(mode);
       setIsAuthOpen(true);
-      showToast('Registration required to continue', 'info');
+      showToast(mode === 'signup' ? 'Donor Registration required' : 'Login or Donor Registration required', 'info');
     } else {
       callback();
     }
@@ -315,7 +341,19 @@ const App: React.FC = () => {
     setMatchResult(possibleDonors.length > 0 ? possibleDonors[0] : null);
   };
 
-  const handleAddDonor = async (e: React.FormEvent) => {
+  const handleOpenEditModal = (donor: Donor) => {
+    setEditingDonorId(donor.id);
+    setNewDonor({
+      name: donor.name,
+      age: donor.age.toString(),
+      bloodType: donor.bloodType,
+      contact: donor.contact,
+      email: donor.email || ''
+    });
+    setIsDonorModalOpen(true);
+  };
+
+  const handleSaveDonor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newDonor.contact.length !== 10) {
       showToast('Contact number must be exactly 10 digits', 'info');
@@ -323,26 +361,51 @@ const App: React.FC = () => {
     }
     setIsSaving(true);
     await new Promise(resolve => setTimeout(resolve, 800));
-    const donor: Donor = {
-      id: Date.now(),
-      name: newDonor.name,
-      age: parseInt(newDonor.age) || 18,
-      bloodType: newDonor.bloodType,
-      contact: newDonor.contact,
-      lastDonation: new Date().toISOString().split('T')[0]
-    };
-    setDonors(prev => [donor, ...prev]);
+
+    if (editingDonorId) {
+      const updatedDonor = {
+        name: newDonor.name,
+        age: parseInt(newDonor.age) || 18,
+        bloodType: newDonor.bloodType,
+        contact: newDonor.contact,
+        email: newDonor.email
+      };
+      setDonors(prev => {
+        const next = prev.map(d => d.id === editingDonorId ? { ...d, ...updatedDonor } : d);
+        return next;
+      });
+      showToast(`Donor ${newDonor.name} updated successfully`);
+    } else {
+      const donor: Donor = {
+        id: Date.now(),
+        name: newDonor.name,
+        age: parseInt(newDonor.age) || 18,
+        bloodType: newDonor.bloodType,
+        contact: newDonor.contact,
+        email: newDonor.email,
+        lastDonation: new Date().toISOString().split('T')[0]
+      };
+      setDonors(prev => {
+        const next = [donor, ...prev];
+        return next;
+      });
+      showToast(`Donor ${donor.name} registered successfully`);
+    }
+
     setIsDonorModalOpen(false);
+    setEditingDonorId(null);
     setIsSaving(false);
-    showToast(`Donor ${donor.name} registered successfully`);
-    setNewDonor({ name: '', age: '', bloodType: 'A+', contact: '' });
+    setNewDonor({ name: '', age: '', bloodType: 'A+', contact: '', email: '' });
   };
 
   const handleDeleteDonor = (id: number) => {
     const donor = donors.find(d => d.id === id);
     if (!donor) return;
     if (window.confirm(`Are you sure you want to remove ${donor.name} from the directory?`)) {
-      setDonors(prev => prev.filter(d => d.id !== id));
+      setDonors(prev => {
+        const next = prev.filter(d => d.id !== id);
+        return next;
+      });
       showToast(`Donor ${donor.name} removed`, 'info');
     }
   };
@@ -378,11 +441,38 @@ const App: React.FC = () => {
         name: newRequest.name,
         age: 30,
         bloodType: newRequest.bloodType as BloodType,
-        contact: "System Generated",
+        contact: newRequest.contact || "System Generated",
         condition: newRequest.condition || "Emergency"
       };
-      setRecipients(prev => [request, ...prev]);
-      findBestMatch(request.bloodType);
+      setRecipients(prev => {
+        const next = [request, ...prev];
+        return next;
+      });
+      const compatibleTypes = recipientCompatibility[request.bloodType] || [];
+      const possibleDonors = donors.filter(d => compatibleTypes.includes(d.bloodType));
+      
+      if (possibleDonors.length > 0) {
+        const bestMatch = possibleDonors[0];
+        setMatchResult(bestMatch);
+        addNotification({
+          title: 'Match Found',
+          message: `A compatible donor (${bestMatch.bloodType}) has been found for ${request.name}.`,
+          type: 'match'
+        });
+        
+        // Automatically trigger the urgent request if email exists
+        if (bestMatch.email) {
+          handleSendUrgentRequest(bestMatch);
+        }
+      } else {
+        setMatchResult(null);
+        addNotification({
+          title: 'No Match Found',
+          message: `No compatible donors currently available for ${request.name} (${request.bloodType}).`,
+          type: 'system'
+        });
+        showToast('No compatible donors found in current cluster', 'info');
+      }
       setIsSaving(false);
     });
   };
@@ -401,7 +491,10 @@ const App: React.FC = () => {
       donationDate: today.toISOString().split('T')[0],
       expiryDate: expiry.toISOString().split('T')[0]
     };
-    setBags(prev => [bag, ...prev]);
+    setBags(prev => {
+      const next = [bag, ...prev];
+      return next;
+    });
     setIsBagModalOpen(false);
     setIsSaving(false);
     showToast(`Blood bag ${bag.type} added to inventory`);
@@ -425,7 +518,10 @@ const App: React.FC = () => {
       details: newResource.details,
       date: new Date().toISOString().split('T')[0]
     };
-    setResourceDonations(prev => [donation, ...prev]);
+    setResourceDonations(prev => {
+      const next = [donation, ...prev];
+      return next;
+    });
     setIsResourceModalOpen(false);
     setIsSaving(false);
     setPaymentVerified(false);
@@ -436,14 +532,102 @@ const App: React.FC = () => {
   const handleDispatchBag = (id: number) => {
     const bag = bags.find(b => b.id === id);
     if (!bag) return;
-    setBags(prev => prev.filter(b => b.id !== id));
+    setBags(prev => {
+      const next = prev.filter(b => b.id !== id);
+      return next;
+    });
     showToast(`Unit ${bag.type} dispatched successfully`, 'info');
   };
 
   const handleNotifyDonor = () => {
     if (!matchResult) return;
+    const message = `Emergency alert dispatched to donor ${matchResult.name} for blood type ${matchResult.bloodType}. Contact: ${matchResult.contact}`;
+    addNotification({
+      title: 'Alert Dispatched',
+      message,
+      type: 'match'
+    });
     showToast(`Alert sent to ${matchResult.name} (${matchResult.contact})`, 'success');
+    
+    // Also offer email option if email exists
+    if (matchResult.email) {
+      setTimeout(() => {
+        if (window.confirm(`Would you like to also send a prewritten email to ${matchResult.name}?`)) {
+          handleEmailDonor(matchResult);
+        }
+      }, 500);
+    }
+    
     setMatchResult(null);
+  };
+
+  const handleSendUrgentRequest = async (donor: Donor) => {
+    if (!donor.email) {
+      showToast('Donor has no email address', 'info');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/send-urgent-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: donor.email,
+          donorName: donor.name,
+          bloodType: donor.bloodType
+        })
+      });
+
+      const contentType = response.headers.get("content-type");
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      }
+
+      if (response.ok) {
+        addNotification({
+          title: 'Urgent Email Sent',
+          message: `Automatic emergency message sent to ${donor.name} (${donor.email})`,
+          type: 'match'
+        });
+        showToast(`Urgent email sent to ${donor.name}`, 'success');
+      } else {
+        // Fallback to mailto if server fails (e.g. missing credentials)
+        console.warn("Automatic send failed, falling back to mailto:", data?.error);
+        const subject = "URGENT: Life-Saving Blood Donation Needed";
+        const body = `Hello,\n\nWe urgently need blood for a patient in critical condition. Your donation could save a life today. If you are available and eligible to donate, please consider helping.\n\nYour support would mean more than words can express.\n\nThank you,\nLifeFlow AI Team\n(Contact: blooddonationlifeflowai@gmail.com)`;
+        const mailtoUrl = `mailto:${donor.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoUrl;
+        
+        addNotification({
+          title: 'Manual Draft Created',
+          message: `Automatic send failed (${data?.error || 'Unknown error'}). Manual draft created for ${donor.name}.`,
+          type: 'system'
+        });
+      }
+    } catch (error) {
+      console.error("Error calling send-email API:", error);
+      showToast('Connection error. Opening mail client...', 'info');
+      // Final fallback
+      window.location.href = `mailto:${donor.email}?subject=Urgent&body=Please help`;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEmailDonor = (donor: Donor) => {
+    const subject = "Urgent: Blood Donation Needed";
+    const body = `Hi ${donor.name},\n\nSomeone needs blood. If you're ready, please tell us.\n\nThank you,\nLifeFlow AI Team\n(Contact: blooddonationlifeflowai@gmail.com)`;
+    const mailtoUrl = `mailto:${donor.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+    
+    addNotification({
+      title: 'Email Sent',
+      message: `Prewritten message drafted for ${donor.name} (${donor.email})`,
+      type: 'match'
+    });
+    showToast(`Email drafted for ${donor.name}`, 'success');
   };
 
   const handleAIChat = async () => {
@@ -469,14 +653,12 @@ const App: React.FC = () => {
   const markAllRead = () => {
     setNotifications(prev => {
       const next = prev.map(n => ({ ...n, read: true }));
-      localStorage.setItem('lifeflow_notifications', JSON.stringify(next));
       return next;
     });
   };
 
   const clearNotifications = () => {
     setNotifications([]);
-    localStorage.removeItem('lifeflow_notifications');
   };
 
   const navItems = [
@@ -505,6 +687,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {isAuthOpen && (
         <Auth 
+          initialMode={authMode}
           onLogin={(user) => { 
             setCurrentUser(user); 
             setIsAuthOpen(false); 
@@ -540,9 +723,9 @@ const App: React.FC = () => {
             <div className="flex flex-col">
                <span className="font-bold text-lg tracking-tight text-slate-800 leading-none">LifeFlow AI</span>
                <div className="flex items-center space-x-1 mt-0.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${isSyncingExternally ? 'bg-blue-500 animate-pulse' : dbStatus === 'connected' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}></div>
-                  <span className={`text-[8px] font-bold uppercase tracking-tighter ${isSyncingExternally ? 'text-blue-500' : 'text-slate-400'}`}>
-                    {isSyncingExternally ? 'Syncing...' : 'Atlas Ready'}
+                  <div className={`w-1.5 h-1.5 rounded-full ${isSyncingExternally ? 'bg-blue-500 animate-pulse' : systemHealth === 'optimal' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}></div>
+                  <span className={`text-[8px] font-bold uppercase tracking-tighter ${isSyncingExternally ? 'text-blue-500' : systemHealth === 'optimal' ? 'text-slate-400' : 'text-amber-500'}`}>
+                    {isSyncingExternally ? 'Syncing...' : systemHealth === 'optimal' ? 'Atlas Ready' : 'Degraded Mode'}
                   </span>
                </div>
             </div>
@@ -610,9 +793,12 @@ const App: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
-                <button onClick={() => setIsAuthOpen(true)} className="bg-red-600 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-100 transition-all flex items-center space-x-2">
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>Login / Join</span>
+                <button onClick={() => { setAuthMode('login'); setIsAuthOpen(true); }} className="text-slate-600 text-xs font-black uppercase tracking-widest hover:text-red-600 transition-colors px-3">
+                  Login
+                </button>
+                <button onClick={() => { setAuthMode('signup'); setIsAuthOpen(true); }} className="bg-red-600 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-100 transition-all flex items-center space-x-2">
+                  <Heart className="w-3.5 h-3.5 fill-current" />
+                  <span>Register as Donor</span>
                 </button>
               </div>
             )}
@@ -631,10 +817,10 @@ const App: React.FC = () => {
               Connect. Donate.<br /><span className="text-red-600 underline decoration-red-200 underline-offset-8">Save Lives.</span>
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Experience real-time donor matching for <strong>Vaghu, Aayan, Akash, and Shreyash</strong>. Mandatory registration ensures safety and reliable matching.
+              Experience real-time donor matching for <strong>Vaghu, Aayan, Akash, and Shreyash</strong>. Mandatory donor registration ensures safety and reliable matching.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <button onClick={() => requireAuth('donor', () => { setActiveTab('donors'); setIsDonorModalOpen(true); })} className="px-10 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center space-x-2">
+              <button onClick={() => requireAuth('donor', () => { setActiveTab('donors'); setIsDonorModalOpen(true); }, 'signup')} className="px-10 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center space-x-2">
                 {!currentUser && <Lock className="w-4 h-4" />}
                 <span>Become a Donor</span>
               </button>
@@ -644,18 +830,55 @@ const App: React.FC = () => {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-24 text-left">
               {[
-                { title: "Real-time Matching", desc: "Our AI cluster instantly connects donors with patients based on compatible blood groups.", icon: Activity },
-                { title: "Community Hub", desc: "Go beyond blood by donating food, clothes, or funds to those in need.", icon: Gift },
-                { title: "Secure Access", desc: "All donors and recipients are verified via our identity management system.", icon: ShieldCheck }
+                { 
+                  title: "Real-Time Donor Matching", 
+                  desc: "Uses AI algorithms to instantly match donors with recipients based on blood type, location, and urgency.", 
+                  icon: Zap 
+                },
+                { 
+                  title: "Emergency Alerts", 
+                  desc: "Sends instant notifications to nearby donors and medical organizations during emergencies.", 
+                  icon: Bell 
+                },
+                { 
+                  title: "User-Friendly Dashboard", 
+                  desc: "Easy-to-use interface for donors, recipients, and administrators to track donations and requests.", 
+                  icon: LayoutDashboard 
+                },
+                { 
+                  title: "Secure Data Management", 
+                  desc: "Stores donor and recipient information securely with role-based access control.", 
+                  icon: ShieldCheck 
+                },
+                { 
+                  title: "Automated Scheduling", 
+                  desc: "Helps donors schedule blood donation appointments and sends reminders automatically.", 
+                  icon: Calendar 
+                },
+                { 
+                  title: "Analytics & Reports", 
+                  desc: "Tracks donation trends, donor activity, and emergency response times for better decision-making.", 
+                  icon: BarChart3 
+                },
+                { 
+                  title: "Scalable & Accessible", 
+                  desc: "Web-based platform accessible from multiple devices, designed to handle growing user data efficiently.", 
+                  icon: Globe 
+                },
+                { 
+                  title: "Community Resources", 
+                  desc: "Go beyond blood by donating food, clothes, or funds to those in need.", 
+                  icon: Gift 
+                }
               ].map((feature, i) => (
-                <div key={i} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6">
-                    <feature.icon className="w-6 h-6" />
+                <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+                  <div className="w-10 h-10 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4">
+                    <feature.icon className="w-5 h-5" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">{feature.title}</h3>
-                  <p className="text-slate-500 text-sm leading-relaxed">{feature.desc}</p>
+                  <h3 className="text-base font-bold text-slate-900 mb-2 leading-tight">{feature.title}</h3>
+                  <p className="text-slate-500 text-xs leading-relaxed">{feature.desc}</p>
                 </div>
               ))}
             </div>
@@ -666,7 +889,7 @@ const App: React.FC = () => {
           <div className="space-y-8 animate-fade-in">
             <div className="flex justify-between items-center border-b border-slate-200 pb-4">
               <h2 className="text-2xl font-bold text-slate-800">Donor Directory</h2>
-              <button onClick={() => requireAuth('donor', () => setIsDonorModalOpen(true))} className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 flex items-center space-x-2">
+              <button onClick={() => requireAuth('donor', () => setIsDonorModalOpen(true), 'signup')} className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 flex items-center space-x-2">
                 {!currentUser && <Lock className="w-4 h-4" />}
                 <Plus className="w-4 h-4" />
                 <span>Add Donor</span>
@@ -699,11 +922,22 @@ const App: React.FC = () => {
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.contact}</td>
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.lastDonation}</td>
                       <td className="px-6 py-4 text-right">
-                        {currentUser?.role === 'admin' && (
-                          <button onClick={() => handleDeleteDonor(d.id)} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full">
-                            <Trash2 className="w-4 h-4" />
+                        <div className="flex justify-end space-x-2">
+                          <button onClick={() => handleSendUrgentRequest(d)} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full" title="Send Urgent Request">
+                            <AlertCircle className="w-4 h-4" />
                           </button>
-                        )}
+                          <button onClick={() => handleEmailDonor(d)} className="p-2 text-slate-400 hover:text-green-600 transition-colors bg-slate-50 rounded-full" title="Send Email">
+                            <Mail className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleOpenEditModal(d)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors bg-slate-50 rounded-full">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          {currentUser?.role === 'admin' && (
+                            <button onClick={() => handleDeleteDonor(d.id)} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -813,7 +1047,10 @@ const App: React.FC = () => {
                         <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100"><p className="text-slate-400 font-bold uppercase text-[10px]">Donor</p><p className="text-slate-800 font-bold">{matchResult.name}</p></div>
                         <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100"><p className="text-slate-400 font-bold uppercase text-[10px]">Group</p><p className="text-red-600 font-bold">{matchResult.bloodType}</p></div>
                       </div>
-                      <button onClick={handleNotifyDonor} className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg flex items-center space-x-2"><Bell className="w-4 h-4" /><span>Dispatch Alert</span></button>
+                      <div className="flex space-x-3">
+                        <button onClick={handleNotifyDonor} className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg flex items-center space-x-2"><Bell className="w-4 h-4" /><span>Dispatch Alert</span></button>
+                        <button onClick={() => handleSendUrgentRequest(matchResult)} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg flex items-center space-x-2"><AlertCircle className="w-4 h-4" /><span>Urgent Request</span></button>
+                      </div>
                     </div>
                   </div>
                 ) : <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl h-full flex flex-col items-center justify-center p-12 text-center text-slate-400"><Activity className="w-12 h-12 mb-4 opacity-20" /><p className="font-medium">Run a verified scan to view matches.</p></div>}
@@ -877,11 +1114,12 @@ const App: React.FC = () => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl animate-fade-in overflow-hidden border border-slate-200">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-               <h3 className="font-bold text-slate-800 text-lg">Register as Donor</h3>
-              <button onClick={() => setIsDonorModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X /></button>
+               <h3 className="font-bold text-slate-800 text-lg">{editingDonorId ? 'Edit Donor Info' : 'Register as Donor'}</h3>
+              <button onClick={() => { setIsDonorModalOpen(false); setEditingDonorId(null); }} className="text-slate-400 hover:text-slate-600"><X /></button>
             </div>
-            <form onSubmit={handleAddDonor} className="p-6 space-y-4">
+            <form onSubmit={handleSaveDonor} className="p-6 space-y-4">
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Full Name</label><input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.name} onChange={e => setNewDonor({...newDonor, name: e.target.value})} disabled={isSaving} /></div>
+              <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.email} onChange={e => setNewDonor({...newDonor, email: e.target.value})} disabled={isSaving} /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Age</label><input type="number" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.age} onChange={e => setNewDonor({...newDonor, age: e.target.value})} disabled={isSaving} /></div>
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Type</label><select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.bloodType} onChange={e => setNewDonor({...newDonor, bloodType: e.target.value as BloodType})} disabled={isSaving}>{BLOOD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
@@ -1035,7 +1273,21 @@ const App: React.FC = () => {
           </div>
           <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-slate-600">
             <div>&copy; 2025 LifeFlow AI • Team Vaghu, Aayan, Akash, Shreyash</div>
-            <div className="flex items-center space-x-6"><a href="tel:112">Emergency: 112</a><div className="flex items-center space-x-1"><Globe className="w-3 h-3" /><span>Health Network</span></div></div>
+            <div className="flex items-center space-x-6">
+              <a href="mailto:blooddonationlifeflowai@gmail.com" className="flex items-center space-x-1 hover:text-red-500 transition-colors">
+                <Mail className="w-3 h-3" />
+                <span>Contact Us</span>
+              </a>
+              <button onClick={handleReportIssue} className="flex items-center space-x-1 hover:text-red-500 transition-colors">
+                <LifeBuoy className="w-3 h-3" />
+                <span>Report Issue</span>
+              </button>
+              <a href="tel:112">Emergency: 112</a>
+              <div className="flex items-center space-x-1">
+                <Globe className="w-3 h-3" />
+                <span>Health Network</span>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

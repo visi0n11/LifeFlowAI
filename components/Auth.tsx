@@ -6,10 +6,11 @@ import { User, BloodType } from '../types';
 interface AuthProps {
   onLogin: (user: User) => void;
   onClose?: () => void;
+  initialMode?: 'login' | 'signup' | 'admin' | 'qr' | 'forgot';
 }
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
-  const [mode, setMode] = useState<'login' | 'signup' | 'admin' | 'qr' | 'forgot'>('login');
+export const Auth: React.FC<AuthProps> = ({ onLogin, onClose, initialMode = 'login' }) => {
+  const [mode, setMode] = useState<'login' | 'signup' | 'admin' | 'qr' | 'forgot'>(initialMode);
   const [formData, setFormData] = useState({ 
     name: '', 
     email: '', 
@@ -22,7 +23,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
 
   const bloodTypes: BloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -46,12 +47,17 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
       }
 
       if (mode === 'forgot') {
-        const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
-        const userExists = savedUsers.some((u: any) => u.email === formData.email) || formData.email === 'admin@lifeflow.ai';
-        if (userExists) {
+        const response = await fetch('/api/auth/forgot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email })
+        });
+        
+        if (response.ok) {
           setResetSuccess(true);
         } else {
-          setError('This email is not registered in the cluster.');
+          const data = await response.json();
+          setError(data.error || 'This email is not registered in the cluster.');
         }
         return;
       }
@@ -62,34 +68,56 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
           return;
         }
 
-        const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
-        const user = savedUsers.find((u: any) => u.email === formData.email && u.password === formData.password);
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email, password: formData.password })
+        });
         
-        if (user) {
-          const { password, ...userWithoutPassword } = user;
-          localStorage.setItem('lifeflow_session', JSON.stringify(userWithoutPassword));
-          onLogin(userWithoutPassword);
+        const contentType = response.headers.get("content-type");
+        if (response.ok) {
+          if (contentType && contentType.includes("application/json")) {
+            const user = await response.json();
+            localStorage.setItem('lifeflow_session', JSON.stringify(user));
+            onLogin(user);
+          } else {
+            throw new Error("Server returned non-JSON response. Please check server logs.");
+          }
         } else {
-          setError('Invalid credentials. Please verify or create an account.');
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            setError(data.error || 'Invalid credentials. Please verify or create an account.');
+          } else {
+            setError(`Auth service error: ${response.status} ${response.statusText}`);
+          }
         }
       } else {
-        const savedUsers = JSON.parse(localStorage.getItem('lifeflow_users') || '[]');
-        if (savedUsers.some((u: any) => u.email === formData.email) || formData.email === 'admin@lifeflow.ai') {
-          setError('This email is already registered in the cluster.');
-          return;
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: Math.random().toString(36).substr(2, 9),
+            ...formData
+          })
+        });
+        
+        const contentType = response.headers.get("content-type");
+        if (response.ok) {
+          if (contentType && contentType.includes("application/json")) {
+            const user = await response.json();
+            localStorage.setItem('lifeflow_session', JSON.stringify(user));
+            onLogin(user);
+          } else {
+            throw new Error("Server returned non-JSON response. Please check server logs.");
+          }
+        } else {
+          if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            setError(data.error || 'This email is already registered in the cluster.');
+          } else {
+            setError(`Registration error: ${response.status} ${response.statusText}`);
+          }
         }
-
-        const newUser = {
-          id: Math.random().toString(36).substr(2, 9),
-          ...formData
-        };
-        
-        savedUsers.push(newUser);
-        localStorage.setItem('lifeflow_users', JSON.stringify(savedUsers));
-        
-        const { password, ...userWithoutPassword } = newUser;
-        localStorage.setItem('lifeflow_session', JSON.stringify(userWithoutPassword));
-        onLogin(userWithoutPassword as User);
       }
     } catch (err) {
       setError('Connection to auth service failed.');
@@ -117,10 +145,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
             {mode === 'admin' ? <ShieldAlert className="w-8 h-8 text-white" /> : mode === 'qr' ? <QrCode className="w-8 h-8 text-white" /> : mode === 'forgot' ? <KeyRound className="w-8 h-8 text-white" /> : <Heart className="w-8 h-8 text-white fill-current" />}
           </div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-            {mode === 'admin' ? 'Admin Gateway' : mode === 'qr' ? 'Instant Access' : mode === 'forgot' ? 'Identity Recovery' : 'LifeFlow AI'}
+            {mode === 'admin' ? 'Admin Gateway' : mode === 'qr' ? 'Instant Access' : mode === 'forgot' ? 'Identity Recovery' : mode === 'signup' ? 'Donor Registration' : 'LifeFlow AI'}
           </h2>
           <p className="text-slate-500 text-sm mt-2 font-medium">
-            {mode === 'qr' ? 'Scan to link your health profile' : mode === 'admin' ? 'Accessing high-level cluster controls' : mode === 'login' ? 'Welcome to the blood donor network' : mode === 'forgot' ? 'Secure password reset protocol' : 'Join the life-saving movement'}
+            {mode === 'qr' ? 'Scan to link your health profile' : mode === 'admin' ? 'Accessing high-level cluster controls' : mode === 'login' ? 'Welcome to the blood donor network' : mode === 'forgot' ? 'Secure password reset protocol' : 'Join the life-saving movement as a donor'}
           </p>
         </div>
 
@@ -238,28 +266,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
             )}
 
             {mode === 'signup' && (
-              <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Cluster Role</label>
-                  <select 
-                    className="w-full px-4 py-4 bg-white/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-red-500/10 outline-none appearance-none shadow-sm cursor-pointer font-bold text-slate-700 text-sm"
-                    value={formData.role}
-                    onChange={e => setFormData({...formData, role: e.target.value as any})}
-                  >
-                    <option value="donor">Donor</option>
-                    <option value="recipient">Recipient</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Blood Type</label>
-                  <select 
-                    className="w-full px-4 py-4 bg-white/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-red-500/10 outline-none appearance-none shadow-sm cursor-pointer font-bold text-slate-700 text-sm"
-                    value={formData.bloodType}
-                    onChange={e => setFormData({...formData, bloodType: e.target.value as BloodType})}
-                  >
-                    {bloodTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
+              <div className="animate-fade-in">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Blood Type</label>
+                <select 
+                  className="w-full px-4 py-4 bg-white/50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-red-500/10 outline-none appearance-none shadow-sm cursor-pointer font-bold text-slate-700 text-sm"
+                  value={formData.bloodType}
+                  onChange={e => setFormData({...formData, bloodType: e.target.value as BloodType})}
+                >
+                  {bloodTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
             )}
 
@@ -293,7 +308,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
               onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setResetSuccess(false); }}
               className="text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-red-600 transition-colors"
             >
-              {mode === 'signup' ? "Already a member? Sign in" : mode === 'forgot' ? "New? Request access" : "New? Request access"}
+              {mode === 'signup' ? "Already a member? Sign in" : mode === 'forgot' ? "New? Register as Donor" : "New? Register as Donor"}
             </button>
             <button 
               onClick={() => { setMode('qr'); setError(''); setResetSuccess(false); }}
