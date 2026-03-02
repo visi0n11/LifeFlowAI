@@ -28,6 +28,7 @@ import {
   TrendingUp,
   ChevronUp,
   ChevronDown,
+  ChevronRight,
   History,
   BookOpen,
   Filter,
@@ -1026,49 +1027,122 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <footer className="bg-white border-t border-slate-200 py-12 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="bg-red-600 p-1.5 rounded-lg">
-                <Heart className="w-5 h-5 text-white fill-current" />
+      <footer className="bg-slate-950 border-t border-slate-900 pt-20 pb-10 mt-auto relative overflow-hidden">
+        {/* Subtle background glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-red-500/50 to-transparent"></div>
+        
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pb-16 border-b border-slate-900">
+            {/* Brand Section */}
+            <div className="lg:col-span-5 space-y-8">
+              <div className="flex items-center space-x-3">
+                <div className="bg-red-600 p-2 rounded-xl shadow-lg shadow-red-900/20">
+                  <Heart className="w-6 h-6 text-white fill-current" />
+                </div>
+                <span className="font-black text-2xl tracking-tighter text-white uppercase italic">LifeFlow AI</span>
               </div>
-              <span className="font-bold text-xl tracking-tight text-slate-800">LifeFlow AI</span>
+              
+              <p className="text-slate-400 text-lg leading-relaxed max-w-md font-medium">
+                The next generation of blood donation infrastructure. 
+                <span className="text-white"> Real-time. </span> 
+                <span className="text-white"> Autonomous. </span> 
+                <span className="text-white"> Life-saving. </span>
+              </p>
+
+              <div className="flex items-center space-x-4">
+                <div className="flex -space-x-2">
+                  {['V', 'A', 'A', 'S'].map((initial, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-slate-400 uppercase">
+                      {initial}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  Core Development Team
+                </div>
+              </div>
             </div>
-            <p className="text-slate-500 text-sm max-w-xs leading-relaxed">
-              Empowering the blood donation ecosystem with intelligent matching and community-driven resource sharing.
-              <br/><span className="mt-2 block text-[10px] font-bold uppercase text-slate-400">Team: Vaghu, Aayan, Akash, Shreyash</span>
-            </p>
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-widest">Contact Us</h4>
-            <div className="space-y-3">
-              <a href="mailto:blooddonationlifeflowai@gmail.com" className="flex items-center space-x-2 text-slate-600 hover:text-red-600 transition-colors text-sm">
-                <Globe className="w-4 h-4" />
-                <span>blooddonationlifeflowai@gmail.com</span>
-              </a>
-              <div className="flex items-center space-x-2 text-slate-600 text-sm">
-                <Smartphone className="w-4 h-4" />
-                <span>+91 98700 00101</span>
+
+            {/* Navigation Grid */}
+            <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8">
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Navigation</h4>
+                <ul className="space-y-4">
+                  {['Home', 'Donors', 'Community', 'Inventory'].map((item) => (
+                    <li key={item}>
+                      <button 
+                        onClick={() => setActiveTab(item.toLowerCase())} 
+                        className="text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center group"
+                      >
+                        <span className="w-0 group-hover:w-2 h-px bg-red-500 mr-0 group-hover:mr-2 transition-all"></span>
+                        {item}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Connect</h4>
+                <ul className="space-y-4">
+                  <li>
+                    <a href="mailto:blooddonationlifeflowai@gmail.com" className="text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center space-x-2">
+                      <Globe className="w-4 h-4 text-red-500/50" />
+                      <span>Email Support</span>
+                    </a>
+                  </li>
+                  <li>
+                    <div className="text-sm font-bold text-slate-400 flex items-center space-x-2">
+                      <Smartphone className="w-4 h-4 text-red-500/50" />
+                      <span>+91 98700 00101</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">System Status</h4>
+                <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black text-slate-500 uppercase">Network</span>
+                    <div className="flex items-center space-x-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                      <span className="text-[9px] font-black text-green-500 uppercase">Active</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black text-slate-500 uppercase">Database</span>
+                    <span className="text-[9px] font-black text-slate-300 uppercase font-mono">{dbStatus}</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-800">
+                    <span className="text-[9px] font-black text-slate-600 uppercase">v2.4.0-stable</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div>
-            <h4 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-widest">Platform</h4>
-            <ul className="space-y-2 text-sm text-slate-600">
-              <li><button onClick={() => setActiveTab('home')} className="hover:text-red-600 transition-colors">Home</button></li>
-              <li><button onClick={() => setActiveTab('donors')} className="hover:text-red-600 transition-colors">Donor Directory</button></li>
-              <li><button onClick={() => setActiveTab('community')} className="hover:text-red-600 transition-colors">Community Hub</button></li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <p className="text-xs text-slate-400 font-medium">© 2026 LifeFlow AI. All rights reserved.</p>
-          <div className="flex items-center space-x-6">
-            <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">Powered by Gemini 3.1 Pro</span>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">System Online</span>
+
+          {/* Bottom Bar */}
+          <div className="mt-10 flex flex-col md:flex-row justify-between items-center space-y-6 md:space-y-0">
+            <div className="flex items-center space-x-6">
+              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                © 2026 LifeFlow AI. Open Access Protocol.
+              </p>
+              <div className="hidden sm:flex items-center space-x-2 px-3 py-1 bg-slate-900 rounded-full border border-slate-800">
+                <div className="w-1 h-1 rounded-full bg-red-500"></div>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Emergency Node</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-8">
+              <div className="flex items-center space-x-2">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Engine</span>
+                <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-[9px] font-black rounded border border-red-500/20 uppercase">Gemini 3.1 Pro</span>
+              </div>
+              <div className="h-4 w-px bg-slate-800"></div>
+              <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-slate-500 hover:text-white transition-colors">
+                <ChevronRight className="w-4 h-4 -rotate-90" />
+              </button>
             </div>
           </div>
         </div>
