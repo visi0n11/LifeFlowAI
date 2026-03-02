@@ -39,6 +39,17 @@ import {
   CreditCard,
   Smartphone
 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer, 
+  Cell,
+  PieChart,
+  Pie
+} from 'recharts';
 import { Auth } from './components/Auth';
 import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
 import { User, Donor, Recipient, BloodBag, BloodType, ResourceDonation, ResourceType, AppNotification, NotificationSettings } from './types';
@@ -63,23 +74,45 @@ const initialDonors: Donor[] = [
   { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", lastDonation: "2024-03-01" },
   { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", lastDonation: "2024-01-20" },
   { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", lastDonation: "2024-03-10" },
+  { id: 5, name: "Rahul Sharma", age: 28, bloodType: "A+", contact: "9876543210", lastDonation: "2024-01-10" },
+  { id: 6, name: "Anjali Gupta", age: 24, bloodType: "B+", contact: "9876543211", lastDonation: "2024-02-20" },
+  { id: 7, name: "Vikram Singh", age: 32, bloodType: "O-", contact: "9876543212", lastDonation: "2023-12-15" },
+  { id: 8, name: "Sneha Reddy", age: 27, bloodType: "AB-", contact: "9876543213", lastDonation: "2024-03-05" },
+  { id: 9, name: "Amit Patel", age: 35, bloodType: "A-", contact: "9876543214", lastDonation: "2024-01-25" },
+  { id: 10, name: "Meera Iyer", age: 29, bloodType: "B-", contact: "9876543215", lastDonation: "2024-02-12" },
+  { id: 11, name: "Rohan Verma", age: 31, bloodType: "O+", contact: "9876543216", lastDonation: "2024-03-15" },
+  { id: 12, name: "Kavita Nair", age: 26, bloodType: "AB+", contact: "9876543217", lastDonation: "2024-01-05" },
 ];
 
 const initialRecipients: Recipient[] = [
   { id: 1, name: "Sahil Mane", age: 29, bloodType: "O+", contact: "9988776655", condition: "Surgery Recovery" },
   { id: 2, name: "Priya Patil", age: 34, bloodType: "AB+", contact: "9988776644", condition: "Anemia Treatment" },
+  { id: 3, name: "Rajesh Kumar", age: 45, bloodType: "B+", contact: "9988776601", condition: "Heart Surgery" },
+  { id: 4, name: "Sunita Devi", age: 52, bloodType: "O-", contact: "9988776602", condition: "Accident Emergency" },
+  { id: 5, name: "Arjun Malhotra", age: 12, bloodType: "A+", contact: "9988776603", condition: "Thalassemia Treatment" },
+  { id: 6, name: "Lakshmi Prasanna", age: 38, bloodType: "AB-", contact: "9988776604", condition: "Post-partum Hemorrhage" },
 ];
 
 const initialBags: BloodBag[] = [
   { id: 1, type: "O+", volume: "450ml", donationDate: "2024-03-12", expiryDate: "2024-04-23" },
   { id: 2, type: "B-", volume: "450ml", donationDate: "2024-03-05", expiryDate: "2024-04-16" },
   { id: 3, type: "AB+", volume: "450ml", donationDate: "2024-01-25", expiryDate: "2024-03-08" },
+  { id: 4, type: "A+", volume: "450ml", donationDate: "2024-03-10", expiryDate: "2024-04-21" },
+  { id: 5, type: "B+", volume: "450ml", donationDate: "2024-03-15", expiryDate: "2024-04-26" },
+  { id: 6, type: "O-", volume: "450ml", donationDate: "2024-03-01", expiryDate: "2024-04-12" },
+  { id: 7, type: "AB+", volume: "450ml", donationDate: "2024-03-20", expiryDate: "2024-05-01" },
+  { id: 8, type: "O+", volume: "450ml", donationDate: "2024-03-18", expiryDate: "2024-04-29" },
+  { id: 9, type: "A-", volume: "450ml", donationDate: "2024-03-05", expiryDate: "2024-04-16" },
 ];
 
 const initialResourceDonations: ResourceDonation[] = [
   { id: 1, type: 'food', donorName: 'Akash', details: '10kg Rice', date: '2024-03-15' },
   { id: 2, type: 'money', donorName: 'Vaghu', details: '₹1500', date: '2024-03-14' },
   { id: 3, type: 'clothes', donorName: 'Aayan', details: '5 Pairs of Trousers', date: '2024-03-10' },
+  { id: 4, type: 'food', donorName: 'Suresh Raina', details: '50kg Wheat', date: '2024-03-18' },
+  { id: 5, type: 'money', donorName: 'MS Dhoni', details: '₹50000', date: '2024-03-20' },
+  { id: 6, type: 'clothes', donorName: 'Virat Kohli', details: '20 Blankets', date: '2024-03-19' },
+  { id: 7, type: 'food', donorName: 'Rohit Sharma', details: '100 Meal Packets', date: '2024-03-21' },
 ];
 
 const App: React.FC = () => {
@@ -658,7 +691,7 @@ const App: React.FC = () => {
               Connect. Donate.<br /><span className="text-red-600 underline decoration-red-200 underline-offset-8">Save Lives.</span>
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Experience real-time donor matching for <strong>Vaghu, Aayan, Akash, and Shreyash</strong>. Mandatory registration ensures safety and reliable matching.
+              Experience real-time donor matching for <strong>Rahul, Anjali, Vikram, and Sneha</strong>. Mandatory registration ensures safety and reliable matching.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <button onClick={() => requireAuth('donor', () => { setActiveTab('donors'); setIsDonorModalOpen(true); })} className="px-10 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center space-x-2">
@@ -899,6 +932,68 @@ const App: React.FC = () => {
                   <p className={`text-3xl font-black ${k.color}`}>{k.val}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8">Blood Group Distribution</h3>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={BLOOD_TYPES.map(type => ({
+                      name: type,
+                      count: bags.filter(b => b.type === type).length
+                    }))}>
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} />
+                      <YAxis hide />
+                      <Tooltip 
+                        contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                        cursor={{fill: '#f8fafc'}}
+                      />
+                      <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                        {BLOOD_TYPES.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#ef4444' : '#f87171'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8">Donor Engagement</h3>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Active', value: donors.length },
+                          { name: 'Inactive', value: 5 },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        <Cell fill="#ef4444" />
+                        <Cell fill="#f1f5f9" />
+                      </Pie>
+                      <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex justify-center space-x-6 mt-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Active Donors</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 rounded-full bg-slate-100"></div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">Inactive</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
