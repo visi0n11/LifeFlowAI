@@ -40,7 +40,8 @@ import {
   CreditCard,
   Smartphone,
   Mail,
-  AlertCircle
+  AlertCircle,
+  LayoutDashboard
 } from 'lucide-react';
 import { Auth } from './components/Auth';
 import { ContactUs } from './components/ContactUs';
@@ -63,10 +64,10 @@ const recipientCompatibility: Record<string, string[]> = {
 
 // --- Initial Mock Data ---
 const initialDonors: Donor[] = [
-  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", email: "vaghu@example.com", lastDonation: "2024-02-15" },
-  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", email: "aayan@example.com", lastDonation: "2024-03-01" },
-  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", email: "akash@example.com", lastDonation: "2024-01-20" },
-  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", email: "shreyash@example.com", lastDonation: "2024-03-10" },
+  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", email: "vaghu@example.com", lastDonation: "2024-02-15", location: "Mumbai" },
+  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", email: "aayan@example.com", lastDonation: "2024-03-01", location: "Pune" },
+  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", email: "akash@example.com", lastDonation: "2024-01-20", location: "Bangalore" },
+  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", email: "shreyash@example.com", lastDonation: "2024-03-10", location: "Delhi" },
 ];
 
 const initialRecipients: Recipient[] = [
@@ -268,7 +269,7 @@ const App: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
 
-  const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '', email: '' });
+  const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '', email: '', location: '' });
   const [newRequest, setNewRequest] = useState({ name: '', bloodType: '' as BloodType | '', condition: '', contact: '', email: '' });
   const [newBag, setNewBag] = useState({ type: 'A+' as BloodType, volume: '450ml' });
   const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
@@ -354,7 +355,8 @@ const App: React.FC = () => {
       age: donor.age.toString(),
       bloodType: donor.bloodType,
       contact: donor.contact,
-      email: donor.email || ''
+      email: donor.email || '',
+      location: donor.location || ''
     });
     setIsDonorModalOpen(true);
   };
@@ -382,7 +384,8 @@ const App: React.FC = () => {
         age: parseInt(newDonor.age) || 18,
         bloodType: newDonor.bloodType,
         contact: newDonor.contact,
-        email: newDonor.email
+        email: newDonor.email,
+        location: newDonor.location
       } : d));
       showToast(`Donor ${newDonor.name} updated successfully`);
     } else {
@@ -393,7 +396,8 @@ const App: React.FC = () => {
         bloodType: newDonor.bloodType,
         contact: newDonor.contact,
         email: newDonor.email,
-        lastDonation: new Date().toISOString().split('T')[0]
+        lastDonation: new Date().toISOString().split('T')[0],
+        location: newDonor.location
       };
       setDonors(prev => [donor, ...prev]);
       showToast(`Donor ${donor.name} registered successfully`);
@@ -402,7 +406,7 @@ const App: React.FC = () => {
     setIsDonorModalOpen(false);
     setEditingDonorId(null);
     setIsSaving(false);
-    setNewDonor({ name: '', age: '', bloodType: 'A+', contact: '', email: '' });
+    setNewDonor({ name: '', age: '', bloodType: 'A+', contact: '', email: '', location: '' });
   };
 
   const handleDeleteDonor = (id: number) => {
@@ -576,6 +580,32 @@ const App: React.FC = () => {
     showToast(`Email drafted for ${donor.name}`, 'success');
   };
 
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      showToast('Geolocation is not supported by your browser', 'info');
+      return;
+    }
+
+    setIsSaving(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setNewDonor(prev => ({
+          ...prev,
+          location: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+        }));
+        showToast('Location captured successfully');
+        setIsSaving(false);
+      },
+      (error) => {
+        setIsSaving(false);
+        let msg = 'Failed to get location';
+        if (error.code === error.PERMISSION_DENIED) msg = 'Location permission denied';
+        showToast(msg, 'info');
+      }
+    );
+  };
+
   const handleAIChat = async () => {
     if (!chatInput.trim()) return;
     const userMsg = chatInput;
@@ -611,11 +641,12 @@ const App: React.FC = () => {
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'donors', label: 'Donors', icon: Users },
     { id: 'recipients', label: 'Recipients', icon: Activity },
     { id: 'bloodbags', label: 'Inventory', icon: Droplet },
     { id: 'community', label: 'Community', icon: Gift },
-    { id: 'dashboard', label: 'Analytics', icon: Activity },
+    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
   ];
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -809,9 +840,10 @@ const App: React.FC = () => {
                     <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase cursor-pointer" onClick={() => requestSort('name')}>
                       <div className="flex items-center"><span>Name</span>{getSortIcon('name')}</div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center cursor-pointer" onClick={() => requestSort('bloodType')}>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase cursor-pointer" onClick={() => requestSort('bloodType')}>
                       <div className="flex items-center justify-center"><span>Group</span>{getSortIcon('bloodType')}</div>
                     </th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Location</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Contact</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase cursor-pointer" onClick={() => requestSort('lastDonation')}>
                       <div className="flex items-center"><span>Last Donation</span>{getSortIcon('lastDonation')}</div>
@@ -825,6 +857,12 @@ const App: React.FC = () => {
                       <td className="px-6 py-4 font-semibold text-slate-800">{d.name}</td>
                       <td className="px-6 py-4 text-center">
                         <span className="inline-block px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">{d.bloodType}</span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 text-sm">
+                        <div className="flex items-center space-x-1">
+                          <Globe className="w-3 h-3 opacity-50" />
+                          <span>{d.location || 'Not set'}</span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.contact}</td>
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.lastDonation}</td>
@@ -1002,6 +1040,122 @@ const App: React.FC = () => {
 
         {activeTab === 'dashboard' && (
           <div className="space-y-8 animate-fade-in">
+            {!currentUser ? (
+              <div className="bg-white rounded-[2.5rem] border border-slate-200 p-12 text-center shadow-sm">
+                <div className="w-20 h-20 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <Lock className="w-10 h-10" />
+                </div>
+                <h2 className="text-3xl font-black text-slate-900 mb-4">Access Restricted</h2>
+                <p className="text-slate-500 max-w-md mx-auto mb-8">Please sign in to view your personalized dashboard, donation history, and matching status.</p>
+                <button onClick={() => setIsAuthOpen(true)} className="px-10 py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg shadow-red-100 hover:bg-red-700 transition-all">Sign In Now</button>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Welcome back, {currentUser.name}!</h2>
+                    <p className="text-slate-500 text-sm mt-1">Here's what's happening with your LifeFlow profile today.</p>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profile Verified</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Droplet className="w-24 h-24 text-red-600" /></div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Blood Group</p>
+                    <p className="text-5xl font-black text-red-600">{currentUser.bloodType || 'N/A'}</p>
+                    <p className="text-xs text-slate-500 mt-4 font-bold uppercase tracking-tighter">Universal Compatibility: {currentUser.bloodType === 'O-' ? 'High' : 'Standard'}</p>
+                  </div>
+
+                  <div className="bg-slate-900 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-6 opacity-10"><ShieldCheck className="w-24 h-24" /></div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Account Role</p>
+                    <p className="text-4xl font-black capitalize">{currentUser.role}</p>
+                    <div className="mt-6 flex items-center space-x-2 text-xs text-slate-400">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Member since March 2024</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Quick Actions</p>
+                      <div className="space-y-2">
+                        <button onClick={() => setActiveTab('donors')} className="w-full py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center space-x-2">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>New Donation</span>
+                        </button>
+                        <button onClick={() => setActiveTab('recipients')} className="w-full py-2.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center space-x-2">
+                          <Search className="w-3.5 h-3.5" />
+                          <span>Find Match</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                      <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center space-x-2">
+                        <History className="w-4 h-4 text-red-600" />
+                        <span>Recent Activity</span>
+                      </h3>
+                      <button onClick={() => setIsNotifOpen(true)} className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:underline">View All</button>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {notifications.slice(0, 5).map(n => (
+                        <div key={n.id} className="p-5 flex items-start space-x-4 hover:bg-slate-50 transition-colors">
+                          <div className={`p-2 rounded-xl ${n.type === 'match' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {n.type === 'match' ? <Users className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{n.title}</p>
+                            <p className="text-xs text-slate-500 mt-1 line-clamp-1">{n.message}</p>
+                            <p className="text-[9px] text-slate-300 font-black uppercase mt-2">{n.timestamp}</p>
+                          </div>
+                        </div>
+                      ))}
+                      {notifications.length === 0 && (
+                        <div className="p-12 text-center text-slate-400 text-xs font-bold uppercase">No recent activity</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
+                      <h3 className="text-lg font-black text-slate-800 mb-6">Eligibility Status</h3>
+                      <div className="flex items-center space-x-6">
+                        <div className="w-20 h-20 rounded-full border-4 border-green-500 flex items-center justify-center">
+                          <span className="text-xl font-black text-green-600">OK</span>
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800">You are eligible to donate!</p>
+                          <p className="text-sm text-slate-500 mt-1">Your last donation was over 3 months ago. You can contribute to the network today.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-red-600 to-red-700 p-8 rounded-[2rem] text-white shadow-xl shadow-red-100 relative overflow-hidden">
+                      <div className="absolute -bottom-4 -right-4 opacity-10 rotate-12"><Heart className="w-32 h-32 fill-current" /></div>
+                      <h3 className="text-xl font-black mb-2">Emergency Alert</h3>
+                      <p className="text-red-100 text-sm mb-6 leading-relaxed">There is a critical shortage of {currentUser.bloodType || 'your'} blood type in your local cluster. Your contribution could save a life in the next 24 hours.</p>
+                      <button onClick={() => setActiveTab('donors')} className="px-6 py-3 bg-white text-red-600 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-red-50 transition-all">Donate Now</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="space-y-8 animate-fade-in">
             <h2 className="text-2xl font-bold text-slate-800 mb-6 tracking-tight">System Analytics</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
@@ -1041,6 +1195,28 @@ const App: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Age</label><input type="number" required min="18" max="65" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.age} onChange={e => setNewDonor({...newDonor, age: e.target.value})} disabled={isSaving} /></div>
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Type</label><select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.bloodType} onChange={e => setNewDonor({...newDonor, bloodType: e.target.value as BloodType})} disabled={isSaving}>{BLOOD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Location (City or Coordinates)</label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl pr-10" 
+                    placeholder="Enter city or use GPS" 
+                    value={newDonor.location} 
+                    onChange={e => setNewDonor({...newDonor, location: e.target.value})} 
+                    disabled={isSaving} 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleGetLocation}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-red-600 transition-colors"
+                    title="Use Current Location"
+                  >
+                    <Globe className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Contact No. (10 digits)</label><input type="text" required maxLength={10} pattern="[0-9]{10}" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="10 digit number" value={newDonor.contact} onChange={e => { const val = e.target.value.replace(/\D/g, ''); if (val.length <= 10) setNewDonor({...newDonor, contact: val}); }} disabled={isSaving} /></div>
               <button type="submit" disabled={isSaving} className="w-full py-3.5 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700 transition-all">{isSaving ? 'Syncing...' : 'Complete Donor Profile'}</button>
