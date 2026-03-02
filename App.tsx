@@ -45,13 +45,6 @@ import { User, Donor, Recipient, BloodBag, BloodType, ResourceDonation, Resource
 
 // --- Constants ---
 const BLOOD_TYPES: BloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-const DONATION_CENTERS = [
-  "City General Hospital",
-  "Red Cross Center - Downtown",
-  "LifeFlow Mobile Unit 01",
-  "St. Jude Medical Center",
-  "Community Blood Bank"
-];
 
 const recipientCompatibility: Record<string, string[]> = {
     "O-": ["O-"],
@@ -66,60 +59,10 @@ const recipientCompatibility: Record<string, string[]> = {
 
 // --- Initial Mock Data ---
 const initialDonors: Donor[] = [
-  { 
-    id: 1, 
-    name: "Vaghu", 
-    age: 24, 
-    bloodType: "O+", 
-    contact: "9870000101", 
-    lastDonation: "2024-02-15",
-    preferredCenters: ["City General Hospital", "LifeFlow Mobile Unit 01"],
-    emergencyAlerts: true,
-    donationHistory: [
-      { id: 101, date: "2024-02-15", center: "City General Hospital", volume: "450ml", status: "completed" },
-      { id: 102, date: "2023-11-10", center: "LifeFlow Mobile Unit 01", volume: "450ml", status: "completed" }
-    ]
-  },
-  { 
-    id: 2, 
-    name: "Aayan", 
-    age: 22, 
-    bloodType: "B-", 
-    contact: "9870000102", 
-    lastDonation: "2024-03-01",
-    preferredCenters: ["Red Cross Center - Downtown"],
-    emergencyAlerts: false,
-    donationHistory: [
-      { id: 201, date: "2024-03-01", center: "Red Cross Center - Downtown", volume: "450ml", status: "completed" }
-    ]
-  },
-  { 
-    id: 3, 
-    name: "Akash", 
-    age: 25, 
-    bloodType: "AB+", 
-    contact: "9870000103", 
-    lastDonation: "2024-01-20",
-    preferredCenters: ["St. Jude Medical Center"],
-    emergencyAlerts: true,
-    donationHistory: [
-      { id: 301, date: "2024-01-20", center: "St. Jude Medical Center", volume: "450ml", status: "completed" },
-      { id: 302, date: "2023-09-15", center: "Community Blood Bank", volume: "450ml", status: "completed" }
-    ]
-  },
-  { 
-    id: 4, 
-    name: "Shreyash", 
-    age: 23, 
-    bloodType: "O+", 
-    contact: "9870000104", 
-    lastDonation: "2024-03-10",
-    preferredCenters: ["Community Blood Bank"],
-    emergencyAlerts: true,
-    donationHistory: [
-      { id: 401, date: "2024-03-10", center: "Community Blood Bank", volume: "450ml", status: "completed" }
-    ]
-  },
+  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", lastDonation: "2024-02-15" },
+  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", lastDonation: "2024-03-01" },
+  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", lastDonation: "2024-01-20" },
+  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", lastDonation: "2024-03-10" },
 ];
 
 const initialRecipients: Recipient[] = [
@@ -289,22 +232,13 @@ const App: React.FC = () => {
   const [sortConfig, setSortConfig] = useState<{ key: keyof Donor; direction: 'asc' | 'desc' } | null>(null);
   const [matchResult, setMatchResult] = useState<Donor | null>(null);
   const [isDonorModalOpen, setIsDonorModalOpen] = useState(false);
-  const [isDonorDetailsOpen, setIsDonorDetailsOpen] = useState(false);
-  const [selectedDonor, setSelectedDonor] = useState<Donor | null>(null);
   const [editingDonorId, setEditingDonorId] = useState<number | null>(null);
   const [isBagModalOpen, setIsBagModalOpen] = useState(false);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
 
-  const [newDonor, setNewDonor] = useState({ 
-    name: '', 
-    age: '', 
-    bloodType: 'A+' as BloodType, 
-    contact: '',
-    preferredCenters: [] as string[],
-    emergencyAlerts: false
-  });
+  const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '' });
   const [newRequest, setNewRequest] = useState({ name: '', bloodType: '' as BloodType | '', condition: '' });
   const [newBag, setNewBag] = useState({ type: 'A+' as BloodType, volume: '450ml' });
   const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
@@ -389,9 +323,7 @@ const App: React.FC = () => {
       name: donor.name,
       age: donor.age.toString(),
       bloodType: donor.bloodType,
-      contact: donor.contact,
-      preferredCenters: donor.preferredCenters || [],
-      emergencyAlerts: donor.emergencyAlerts || false
+      contact: donor.contact
     });
     setIsDonorModalOpen(true);
   };
@@ -411,9 +343,7 @@ const App: React.FC = () => {
         name: newDonor.name,
         age: parseInt(newDonor.age) || 18,
         bloodType: newDonor.bloodType,
-        contact: newDonor.contact,
-        preferredCenters: newDonor.preferredCenters,
-        emergencyAlerts: newDonor.emergencyAlerts
+        contact: newDonor.contact
       } : d));
       showToast(`Donor ${newDonor.name} updated successfully`);
     } else {
@@ -423,10 +353,7 @@ const App: React.FC = () => {
         age: parseInt(newDonor.age) || 18,
         bloodType: newDonor.bloodType,
         contact: newDonor.contact,
-        lastDonation: new Date().toISOString().split('T')[0],
-        preferredCenters: newDonor.preferredCenters,
-        emergencyAlerts: newDonor.emergencyAlerts,
-        donationHistory: []
+        lastDonation: new Date().toISOString().split('T')[0]
       };
       setDonors(prev => [donor, ...prev]);
       showToast(`Donor ${donor.name} registered successfully`);
@@ -435,14 +362,7 @@ const App: React.FC = () => {
     setIsDonorModalOpen(false);
     setEditingDonorId(null);
     setIsSaving(false);
-    setNewDonor({ 
-      name: '', 
-      age: '', 
-      bloodType: 'A+', 
-      contact: '',
-      preferredCenters: [],
-      emergencyAlerts: false
-    });
+    setNewDonor({ name: '', age: '', bloodType: 'A+', contact: '' });
   };
 
   const handleDeleteDonor = (id: number) => {
@@ -805,14 +725,11 @@ const App: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.contact}</td>
                       <td className="px-6 py-4 text-slate-500 text-sm">{d.lastDonation}</td>
-      <td className="px-6 py-4 text-right">
-        <div className="flex justify-end space-x-2">
-          <button onClick={() => { setSelectedDonor(d); setIsDonorDetailsOpen(true); }} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full" title="View Details">
-            <History className="w-4 h-4" />
-          </button>
-          <button onClick={() => handleOpenEditModal(d)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors bg-slate-50 rounded-full">
-            <Edit className="w-4 h-4" />
-          </button>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end space-x-2">
+                          <button onClick={() => handleOpenEditModal(d)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors bg-slate-50 rounded-full">
+                            <Edit className="w-4 h-4" />
+                          </button>
                           {currentUser?.role === 'admin' && (
                             <button onClick={() => handleDeleteDonor(d.id)} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full">
                               <Trash2 className="w-4 h-4" />
@@ -988,115 +905,6 @@ const App: React.FC = () => {
       </main>
 
       {/* Modals */}
-      {/* Donor Details Modal */}
-      {isDonorDetailsOpen && selectedDonor && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl animate-fade-in overflow-hidden border border-slate-200">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <div className="flex items-center space-x-3">
-                <div className="bg-red-600 p-2 rounded-xl shadow-lg shadow-red-100">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-lg">{selectedDonor.name}'s Profile</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Donor Identity Verified</p>
-                </div>
-              </div>
-              <button onClick={() => { setIsDonorDetailsOpen(false); setSelectedDonor(null); }} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"><X className="w-5 h-5" /></button>
-            </div>
-            
-            <div className="p-8 space-y-8 max-h-[80vh] overflow-y-auto">
-              {/* Top Stats */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Blood Group</p>
-                  <p className="text-2xl font-black text-red-600">{selectedDonor.bloodType}</p>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Age</p>
-                  <p className="text-2xl font-black text-slate-800">{selectedDonor.age}</p>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Alerts</p>
-                  <p className={`text-sm font-bold ${selectedDonor.emergencyAlerts ? 'text-green-600' : 'text-slate-400'}`}>
-                    {selectedDonor.emergencyAlerts ? 'ENABLED' : 'DISABLED'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Preferred Centers */}
-              <div>
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center space-x-2">
-                  <Home className="w-3.5 h-3.5" />
-                  <span>Preferred Donation Centers</span>
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedDonor.preferredCenters && selectedDonor.preferredCenters.length > 0 ? (
-                    selectedDonor.preferredCenters.map(center => (
-                      <span key={center} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold border border-blue-100">
-                        {center}
-                      </span>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-400 italic">No preferred centers listed</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Donation History */}
-              <div>
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center space-x-2">
-                  <History className="w-3.5 h-3.5" />
-                  <span>Past Donation History</span>
-                </h4>
-                <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-100 border-b border-slate-200">
-                      <tr>
-                        <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Date</th>
-                        <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Center</th>
-                        <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Volume</th>
-                        <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px] text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {selectedDonor.donationHistory && selectedDonor.donationHistory.length > 0 ? (
-                        selectedDonor.donationHistory.map(record => (
-                          <tr key={record.id} className="hover:bg-white transition-colors">
-                            <td className="px-4 py-3 text-slate-600 font-medium">{record.date}</td>
-                            <td className="px-4 py-3 text-slate-600">{record.center}</td>
-                            <td className="px-4 py-3 text-slate-600">{record.volume}</td>
-                            <td className="px-4 py-3 text-right">
-                              <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                                record.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                              }`}>
-                                {record.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={4} className="px-4 py-8 text-center text-slate-400 italic">
-                            No donation history records found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
-              <button onClick={() => { setIsDonorDetailsOpen(false); setSelectedDonor(null); }} className="px-6 py-2.5 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition-all text-sm">
-                Close Profile
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {isDonorModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl animate-fade-in overflow-hidden border border-slate-200">
@@ -1104,55 +912,13 @@ const App: React.FC = () => {
                <h3 className="font-bold text-slate-800 text-lg">{editingDonorId ? 'Edit Donor Info' : 'Register as Donor'}</h3>
               <button onClick={() => { setIsDonorModalOpen(false); setEditingDonorId(null); }} className="text-slate-400 hover:text-slate-600"><X /></button>
             </div>
-            <form onSubmit={handleSaveDonor} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <form onSubmit={handleSaveDonor} className="p-6 space-y-4">
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Full Name</label><input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.name} onChange={e => setNewDonor({...newDonor, name: e.target.value})} disabled={isSaving} /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Age</label><input type="number" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.age} onChange={e => setNewDonor({...newDonor, age: e.target.value})} disabled={isSaving} /></div>
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Type</label><select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.bloodType} onChange={e => setNewDonor({...newDonor, bloodType: e.target.value as BloodType})} disabled={isSaving}>{BLOOD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
               </div>
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Contact No. (10 digits)</label><input type="text" required maxLength={10} pattern="[0-9]{10}" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="10 digit number" value={newDonor.contact} onChange={e => { const val = e.target.value.replace(/\D/g, ''); if (val.length <= 10) setNewDonor({...newDonor, contact: val}); }} disabled={isSaving} /></div>
-              
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Preferred Donation Centers</label>
-                <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  {DONATION_CENTERS.map(center => (
-                    <label key={center} className="flex items-center space-x-3 cursor-pointer group">
-                      <input 
-                        type="checkbox" 
-                        className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
-                        checked={newDonor.preferredCenters.includes(center)}
-                        onChange={e => {
-                          const centers = e.target.checked 
-                            ? [...newDonor.preferredCenters, center]
-                            : newDonor.preferredCenters.filter(c => c !== center);
-                          setNewDonor({...newDonor, preferredCenters: centers});
-                        }}
-                      />
-                      <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors">{center}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-red-600 p-1.5 rounded-lg">
-                    <AlertTriangle className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-red-900">Emergency Alerts</p>
-                    <p className="text-[10px] text-red-600">Opt-in for critical blood shortages</p>
-                  </div>
-                </div>
-                <button 
-                  type="button"
-                  onClick={() => setNewDonor({...newDonor, emergencyAlerts: !newDonor.emergencyAlerts})}
-                  className={`w-10 h-5 rounded-full transition-colors relative ${newDonor.emergencyAlerts ? 'bg-red-600' : 'bg-slate-300'}`}
-                >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${newDonor.emergencyAlerts ? 'left-6' : 'left-1'}`}></div>
-                </button>
-              </div>
-
               <button type="submit" disabled={isSaving} className="w-full py-3.5 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700 transition-all">{isSaving ? 'Syncing...' : 'Complete Donor Profile'}</button>
             </form>
           </div>
@@ -1293,15 +1059,50 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <footer className="bg-slate-900 text-slate-400 py-6 px-6 mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col space-y-4">
-          <div className="flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-4">
-            <div className="flex items-center space-x-2"><Heart className="w-5 h-5 text-red-500 fill-current" /><span className="text-lg font-bold text-white">LifeFlow AI</span></div>
-            <div className="flex items-center space-x-4 bg-slate-800/40 px-3 py-1.5 rounded-full border border-slate-800"><div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div><span className="text-[9px] font-black uppercase text-slate-300">Identity Secure</span></div>
+      <footer className="bg-white border-t border-slate-200 py-12 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="col-span-1 md:col-span-2">
+            <div className="flex items-center space-x-2 mb-4">
+              <div className="bg-red-600 p-1.5 rounded-lg">
+                <Heart className="w-5 h-5 text-white fill-current" />
+              </div>
+              <span className="font-bold text-xl tracking-tight text-slate-800">LifeFlow AI</span>
+            </div>
+            <p className="text-slate-500 text-sm max-w-xs leading-relaxed">
+              Empowering the blood donation ecosystem with intelligent matching and community-driven resource sharing.
+              <br/><span className="mt-2 block text-[10px] font-bold uppercase text-slate-400">Team: Vaghu, Aayan, Akash, Shreyash</span>
+            </p>
           </div>
-          <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-slate-600">
-            <div>&copy; 2025 LifeFlow AI • Team Vaghu, Aayan, Akash, Shreyash</div>
-            <div className="flex items-center space-x-6"><a href="tel:112">Emergency: 112</a><div className="flex items-center space-x-1"><Globe className="w-3 h-3" /><span>Health Network</span></div></div>
+          <div>
+            <h4 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-widest">Contact Us</h4>
+            <div className="space-y-3">
+              <a href="mailto:blooddonationlifeflowai@gmail.com" className="flex items-center space-x-2 text-slate-600 hover:text-red-600 transition-colors text-sm">
+                <Globe className="w-4 h-4" />
+                <span>blooddonationlifeflowai@gmail.com</span>
+              </a>
+              <div className="flex items-center space-x-2 text-slate-600 text-sm">
+                <Smartphone className="w-4 h-4" />
+                <span>+91 98700 00101</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-widest">Platform</h4>
+            <ul className="space-y-2 text-sm text-slate-600">
+              <li><button onClick={() => setActiveTab('home')} className="hover:text-red-600 transition-colors">Home</button></li>
+              <li><button onClick={() => setActiveTab('donors')} className="hover:text-red-600 transition-colors">Donor Directory</button></li>
+              <li><button onClick={() => setActiveTab('community')} className="hover:text-red-600 transition-colors">Community Hub</button></li>
+            </ul>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+          <p className="text-xs text-slate-400 font-medium">© 2026 LifeFlow AI. All rights reserved.</p>
+          <div className="flex items-center space-x-6">
+            <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">Powered by Gemini 3.1 Pro</span>
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">System Online</span>
+            </div>
           </div>
         </div>
       </footer>
