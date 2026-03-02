@@ -9,14 +9,24 @@ export interface User {
   bloodType?: BloodType;
 }
 
+export interface DonationRecord {
+  id: number;
+  date: string;
+  center: string;
+  volume: string;
+  status: 'completed' | 'deferred' | 'cancelled';
+}
+
 export interface Donor {
   id: number;
   name: string;
   age: number;
   bloodType: BloodType;
   contact: string;
-  email: string;
   lastDonation: string;
+  preferredCenters?: string[];
+  donationHistory?: DonationRecord[];
+  emergencyAlerts?: boolean;
 }
 
 export interface Recipient {
@@ -25,7 +35,6 @@ export interface Recipient {
   age: number;
   bloodType: BloodType;
   contact: string;
-  email: string;
   condition: string;
 }
 

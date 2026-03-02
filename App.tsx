@@ -43,6 +43,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Auth } from './components/Auth';
+import { ContactUs } from './components/ContactUs';
 import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
 import { User, Donor, Recipient, BloodBag, BloodType, ResourceDonation, ResourceType, AppNotification, NotificationSettings } from './types';
 
@@ -1010,6 +1011,13 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
+
+        {activeTab === 'contact' && (
+          <ContactUs 
+            onBack={() => setActiveTab('home')} 
+            companyEmail="blooddonationlifeflowai@gmail.com" 
+          />
+        )}
       </main>
 
       {/* Modals */}
@@ -1177,10 +1185,10 @@ const App: React.FC = () => {
           <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-slate-600">
             <div>&copy; 2025 LifeFlow AI • Team Vaghu, Aayan, Akash, Shreyash</div>
             <div className="flex items-center space-x-6">
-              <a href="mailto:blooddonationlifeflowai@gmail.com" className="flex items-center space-x-1 hover:text-red-500 transition-colors">
+              <button onClick={() => setActiveTab('contact')} className="flex items-center space-x-1 hover:text-red-500 transition-colors">
                 <Mail className="w-3 h-3" />
                 <span>Contact Us</span>
-              </a>
+              </button>
               <button onClick={handleReportIssue} className="flex items-center space-x-1 hover:text-red-500 transition-colors">
                 <LifeBuoy className="w-3 h-3" />
                 <span>Report Issue</span>

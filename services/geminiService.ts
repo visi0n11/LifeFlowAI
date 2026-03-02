@@ -94,8 +94,8 @@ export const LOCAL_FAQ = [
     response: "Hello! I am LifeFlow AI, your comprehensive blood bank assistant. I have been trained with 100+ replies on eligibility, health, and procedures. How can I help you save a life today?"
   },
   {
-    keywords: ["contact", "email", "support", "reach out", "gmail", "company"],
-    response: "You can reach the LifeFlow AI team at blooddonationlifeflowai@gmail.com for any inquiries, support, or partnership requests."
+    keywords: ["contact", "email", "support", "reach out", "company", "helpdesk"],
+    response: "You can reach our team at blooddonationlifeflowai@gmail.com for any inquiries, support, or partnership opportunities."
   }
 ];
 
@@ -148,7 +148,7 @@ export const getAIChatResponse = async (
         Hb min: 12.5(F)/13.0(M). 
         Deferrals: Tattoos(3m), Malaria travel(3m). 
         Team: Vaghu(O+), Aayan(B-), Akash(AB+), Shreyash(O+).
-        Contact: blooddonationlifeflowai@gmail.com.
+        Contact: blooddonationlifeflowai@gmail.com
         Keep responses professional, encouraging, and medical-grounded. Conciseness is key for speed.`,
         temperature: 0.5,
       },
