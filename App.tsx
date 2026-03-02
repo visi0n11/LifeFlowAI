@@ -361,6 +361,13 @@ const App: React.FC = () => {
 
   const handleSaveDonor = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const age = parseInt(newDonor.age);
+    if (isNaN(age) || age < 18 || age > 65) {
+      showToast('Donor age must be between 18 and 65 years old', 'info');
+      return;
+    }
+
     if (newDonor.contact.length !== 10) {
       showToast('Contact number must be exactly 10 digits', 'info');
       return;
@@ -1032,7 +1039,7 @@ const App: React.FC = () => {
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Full Name</label><input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.name} onChange={e => setNewDonor({...newDonor, name: e.target.value})} disabled={isSaving} /></div>
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.email} onChange={e => setNewDonor({...newDonor, email: e.target.value})} disabled={isSaving} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Age</label><input type="number" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.age} onChange={e => setNewDonor({...newDonor, age: e.target.value})} disabled={isSaving} /></div>
+                <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Age</label><input type="number" required min="18" max="65" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.age} onChange={e => setNewDonor({...newDonor, age: e.target.value})} disabled={isSaving} /></div>
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Type</label><select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.bloodType} onChange={e => setNewDonor({...newDonor, bloodType: e.target.value as BloodType})} disabled={isSaving}>{BLOOD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
               </div>
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Contact No. (10 digits)</label><input type="text" required maxLength={10} pattern="[0-9]{10}" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" placeholder="10 digit number" value={newDonor.contact} onChange={e => { const val = e.target.value.replace(/\D/g, ''); if (val.length <= 10) setNewDonor({...newDonor, contact: val}); }} disabled={isSaving} /></div>
