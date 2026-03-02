@@ -27,14 +27,6 @@ export interface Recipient {
   condition: string;
 }
 
-export interface BloodBag {
-  id: number;
-  type: BloodType;
-  volume: string;
-  donationDate: string;
-  expiryDate: string;
-}
-
 export type ResourceType = 'food' | 'clothes' | 'money';
 
 export interface ResourceDonation {
@@ -49,13 +41,12 @@ export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  type: 'inventory' | 'match' | 'system' | 'reminder';
+  type: 'match' | 'system' | 'reminder';
   timestamp: string;
   read: boolean;
 }
 
 export interface NotificationSettings {
-  inventoryAlerts: boolean;
   matchAlerts: boolean;
   systemAlerts: boolean;
 }
