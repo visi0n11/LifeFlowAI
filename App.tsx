@@ -12,6 +12,7 @@ import {
   Send,
   Plus,
   Cloud,
+  Database,
   RefreshCw,
   Search,
   Bell,
@@ -40,7 +41,7 @@ import {
 } from 'lucide-react';
 import { Auth } from './components/Auth';
 import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
-import { User, Donor, Recipient, BloodType, ResourceDonation, ResourceType, AppNotification, NotificationSettings } from './types';
+import { User, Donor, Recipient, BloodBag, BloodType, ResourceDonation, ResourceType, AppNotification, NotificationSettings } from './types';
 
 // --- Constants ---
 const BLOOD_TYPES: BloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -67,6 +68,12 @@ const initialDonors: Donor[] = [
 const initialRecipients: Recipient[] = [
   { id: 1, name: "Sahil Mane", age: 29, bloodType: "O+", contact: "9988776655", condition: "Surgery Recovery" },
   { id: 2, name: "Priya Patil", age: 34, bloodType: "AB+", contact: "9988776644", condition: "Anemia Treatment" },
+];
+
+const initialBags: BloodBag[] = [
+  { id: 1, type: "O+", volume: "450ml", donationDate: "2024-03-12", expiryDate: "2024-04-23" },
+  { id: 2, type: "B-", volume: "450ml", donationDate: "2024-03-05", expiryDate: "2024-04-16" },
+  { id: 3, type: "AB+", volume: "450ml", donationDate: "2024-01-25", expiryDate: "2024-03-08" },
 ];
 
 const initialResourceDonations: ResourceDonation[] = [
@@ -106,6 +113,7 @@ const App: React.FC = () => {
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>(() => {
     const saved = localStorage.getItem('lifeflow_notif_settings');
     return saved ? JSON.parse(saved) : {
+      inventoryAlerts: true,
       matchAlerts: true,
       systemAlerts: true
     };
@@ -126,6 +134,15 @@ const App: React.FC = () => {
       return saved ? JSON.parse(saved) : initialRecipients;
     } catch (e) {
       return initialRecipients;
+    }
+  });
+  
+  const [bags, setBags] = useState<BloodBag[]>(() => {
+    try {
+      const saved = localStorage.getItem('lifeflow_bags');
+      return saved ? JSON.parse(saved) : initialBags;
+    } catch (e) {
+      return initialBags;
     }
   });
 
@@ -155,6 +172,10 @@ const App: React.FC = () => {
           setRecipients(parsedData);
           updated = true;
           break;
+        case 'lifeflow_bags':
+          setBags(parsedData);
+          updated = true;
+          break;
         case 'lifeflow_resources':
           setResourceDonations(parsedData);
           updated = true;
@@ -180,8 +201,19 @@ const App: React.FC = () => {
 
   // --- Real-time Logic (Triggers) ---
   useEffect(() => {
-    // Logic for other alerts can go here
-  }, [notifSettings, notifications]);
+    if (!notifSettings.inventoryAlerts) return;
+    BLOOD_TYPES.forEach(type => {
+      const count = bags.filter(b => b.type === type).length;
+      if (count <= 1) {
+        const title = `Critical Stock: ${type}`;
+        const message = `Blood inventory for group ${type} is dangerously low. Please prioritize ${type} donations.`;
+        const existing = notifications.find(n => n.title === title && !n.read);
+        if (!existing) {
+          addNotification({ title, message, type: 'inventory' });
+        }
+      }
+    });
+  }, [bags, notifSettings.inventoryAlerts, notifications]);
 
   const addNotification = (notif: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
     const newNotif: AppNotification = {
@@ -201,22 +233,25 @@ const App: React.FC = () => {
   const [matchResult, setMatchResult] = useState<Donor | null>(null);
   const [isDonorModalOpen, setIsDonorModalOpen] = useState(false);
   const [editingDonorId, setEditingDonorId] = useState<number | null>(null);
+  const [isBagModalOpen, setIsBagModalOpen] = useState(false);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
 
   const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '' });
   const [newRequest, setNewRequest] = useState({ name: '', bloodType: '' as BloodType | '', condition: '' });
+  const [newBag, setNewBag] = useState({ type: 'A+' as BloodType, volume: '450ml' });
   const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
 
   useEffect(() => {
     localStorage.setItem('lifeflow_donors', JSON.stringify(donors));
     localStorage.setItem('lifeflow_recipients', JSON.stringify(recipients));
+    localStorage.setItem('lifeflow_bags', JSON.stringify(bags));
     localStorage.setItem('lifeflow_resources', JSON.stringify(resourceDonations));
     setDbStatus('syncing');
     const timer = setTimeout(() => setDbStatus('connected'), 600);
     return () => clearTimeout(timer);
-  }, [donors, recipients, resourceDonations]);
+  }, [donors, recipients, bags, resourceDonations]);
 
   useEffect(() => {
     localStorage.setItem('lifeflow_notif_settings', JSON.stringify(notifSettings));
@@ -379,6 +414,26 @@ const App: React.FC = () => {
     });
   };
 
+  const handleAddBag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const today = new Date();
+    const expiry = new Date();
+    expiry.setDate(today.getDate() + 42);
+    const bag: BloodBag = {
+      id: Date.now(),
+      type: newBag.type,
+      volume: newBag.volume,
+      donationDate: today.toISOString().split('T')[0],
+      expiryDate: expiry.toISOString().split('T')[0]
+    };
+    setBags(prev => [bag, ...prev]);
+    setIsBagModalOpen(false);
+    setIsSaving(false);
+    showToast(`Blood bag ${bag.type} added to inventory`);
+  };
+
   const handleAddResourceDonation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newResource.details || !newResource.donorName) return;
@@ -403,6 +458,13 @@ const App: React.FC = () => {
     setPaymentVerified(false);
     showToast(`Thank you for your ${donation.type} donation, ${donation.donorName}!`);
     setNewResource({ type: 'food', details: '', donorName: currentUser?.name || '' });
+  };
+
+  const handleDispatchBag = (id: number) => {
+    const bag = bags.find(b => b.id === id);
+    if (!bag) return;
+    setBags(prev => prev.filter(b => b.id !== id));
+    showToast(`Unit ${bag.type} dispatched successfully`, 'info');
   };
 
   const handleNotifyDonor = () => {
@@ -448,6 +510,7 @@ const App: React.FC = () => {
     { id: 'home', label: 'Home', icon: Home },
     { id: 'donors', label: 'Donors', icon: Users },
     { id: 'recipients', label: 'Recipients', icon: Activity },
+    { id: 'bloodbags', label: 'Inventory', icon: Droplet },
     { id: 'community', label: 'Community', icon: Gift },
     { id: 'dashboard', label: 'Analytics', icon: Activity },
   ];
@@ -542,8 +605,8 @@ const App: React.FC = () => {
                   <div className="max-h-96 overflow-y-auto divide-y divide-slate-100">
                     {notifications.length > 0 ? notifications.map(n => (
                       <div key={n.id} className={`p-4 hover:bg-slate-50 transition-colors flex items-start space-x-3 ${!n.read ? 'bg-blue-50/30' : ''}`}>
-                        <div className={`p-2 rounded-xl shrink-0 ${n.type === 'match' ? 'bg-red-100 text-red-600' : n.type === 'system' ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-100 text-blue-600'}`}>
-                          {n.type === 'match' ? <Users className="w-4 h-4" /> : n.type === 'system' ? <Cloud className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                        <div className={`p-2 rounded-xl shrink-0 ${n.type === 'inventory' ? 'bg-amber-100 text-amber-600' : n.type === 'match' ? 'bg-red-100 text-red-600' : n.type === 'system' ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-100 text-blue-600'}`}>
+                          {n.type === 'inventory' ? <AlertTriangle className="w-4 h-4" /> : n.type === 'match' ? <Users className="w-4 h-4" /> : n.type === 'system' ? <Cloud className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-slate-800 leading-tight mb-1">{n.title}</p>
@@ -735,6 +798,7 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {/* ... (Existing Recipients, Bloodbags, and Dashboard tabs remain the same) ... */}
         {activeTab === 'recipients' && (
           <div className="space-y-8 animate-fade-in">
              <div className="border-b border-slate-200 pb-4">
@@ -790,11 +854,42 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'bloodbags' && (
+          <div className="space-y-8 animate-fade-in">
+             <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+              <div><h2 className="text-2xl font-bold text-slate-800">Inventory Management</h2><p className="text-slate-500 text-sm">Real-time blood unit tracking.</p></div>
+              {currentUser?.role === 'admin' && (
+                <button onClick={() => setIsBagModalOpen(true)} className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center space-x-2">
+                  <Plus className="w-4 h-4" /><span>Add Unit</span>
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {bags.map(bag => (
+                <div key={bag.id} className="bg-white rounded-2xl border border-slate-200 p-6 relative overflow-hidden group hover:shadow-md transition-all">
+                  <div className="relative">
+                    <div className="text-3xl font-black text-red-600 mb-4">{bag.type}</div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between text-slate-400 uppercase font-bold tracking-widest"><span>Vol.</span><span className="text-slate-800">{bag.volume}</span></div>
+                      <div className="flex justify-between text-slate-400 uppercase font-bold tracking-widest"><span>Date.</span><span className="text-slate-800">{bag.donationDate}</span></div>
+                    </div>
+                    <div className="mt-6 pt-4 border-t border-slate-100 flex gap-2">
+                      <button onClick={() => showToast(`Report for unit #${bag.id}`, 'info')} className="flex-1 text-[9px] font-black uppercase tracking-widest bg-slate-50 py-2 rounded-lg">History</button>
+                      {currentUser?.role === 'admin' && <button onClick={() => handleDispatchBag(bag.id)} className="flex-1 text-[9px] font-black uppercase tracking-widest bg-red-600 text-white py-2 rounded-lg">Dispatch</button>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'dashboard' && (
           <div className="space-y-8 animate-fade-in">
             <h2 className="text-2xl font-bold text-slate-800 mb-6 tracking-tight">System Analytics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
+                { label: 'Inventory Units', val: bags.length, icon: Database, color: 'text-red-600' },
                 { label: 'Verified Donors', val: donors.length, icon: Users, color: 'text-blue-600' },
                 { label: 'System Health', val: 'Online', icon: Cloud, color: 'text-green-600' },
                 { label: 'Match Requests', val: recipients.length, icon: Activity, color: 'text-orange-600' },
