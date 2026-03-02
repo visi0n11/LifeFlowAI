@@ -47,8 +47,7 @@ async function readDb() {
         { id: 4, type: 'food', donorName: 'Rahul Sharma', details: '5kg Wheat Flour', date: '2024-03-22' },
         { id: 5, type: 'money', donorName: 'Sneha Gupta', details: '₹2000', date: '2024-03-25' },
       ],
-      notifications: [],
-      users: []
+      notifications: []
     };
     await fs.writeFile(DB_FILE, JSON.stringify(initialDb, null, 2), "utf-8");
     return initialDb;
@@ -131,48 +130,6 @@ async function startServer() {
       res.json({ success: true });
     } else {
       res.status(404).json({ error: "Collection not found" });
-    }
-  });
-
-  // Auth Endpoints
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
-    console.log("Login request received:", req.body.email);
-    const { email, password } = req.body;
-    const db = await readDb() as any;
-    const user = db.users.find((u: any) => u.email === email && u.password === password);
-    if (user) {
-      console.log("Login successful for:", email);
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } else {
-      console.log("Login failed for:", email);
-      res.status(401).json({ error: "Invalid credentials" });
-    }
-  });
-
-  app.post("/api/auth/signup", async (req: Request, res: Response) => {
-    console.log("Signup request received:", req.body.email);
-    const userData = req.body;
-    const db = await readDb() as any;
-    if (db.users.some((u: any) => u.email === userData.email)) {
-      console.log("Signup failed: User already exists:", userData.email);
-      return res.status(400).json({ error: "User already exists" });
-    }
-    db.users.push(userData);
-    await writeDb(db);
-    console.log("Signup successful for:", userData.email);
-    const { password, ...userWithoutPassword } = userData;
-    res.json(userWithoutPassword);
-  });
-
-  app.post("/api/auth/forgot", async (req: Request, res: Response) => {
-    const { email } = req.body;
-    const db = await readDb() as any;
-    const userExists = db.users.some((u: any) => u.email === email) || email === 'admin@lifeflow.ai';
-    if (userExists) {
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ error: "User not found" });
     }
   });
 

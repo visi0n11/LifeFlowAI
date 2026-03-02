@@ -1,6 +1,6 @@
 {
   "name": "LifeFlow AI - Smart Blood Bank",
-  "description": "LifeFlow AI is a smart blood donation platform featuring real-time matching, emergency alerts, secure data management, and automated scheduling to connect donors with recipients efficiently.",
+  "description": "LifeFlow AI is an open-access smart blood donation platform featuring real-time matching, emergency alerts, and secure cloud-synced data management to connect donors with recipients efficiently without authentication barriers.",
   "requestFramePermissions": [
     "geolocation"
   ]

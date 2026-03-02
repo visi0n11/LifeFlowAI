@@ -22,24 +22,17 @@
     { "id": 2, "type": "B-", "volume": "450ml", "donationDate": "2024-03-05", "expiryDate": "2024-04-16" },
     { "id": 3, "type": "AB+", "volume": "450ml", "donationDate": "2024-01-25", "expiryDate": "2024-03-08" },
     { "id": 4, "type": "A+", "volume": "450ml", "donationDate": "2024-03-20", "expiryDate": "2024-05-01" },
-    { "id": 5, "type": "O-", "volume": "450ml", "donationDate": "2024-03-15", "expiryDate": "2024-04-26" }
+    { "id": 5, "type": "O-", "volume": "450ml", "donationDate": "2024-03-15", "expiryDate": "2024-04-26" },
+    { "id": 6, "type": "B+", "volume": "450ml", "donationDate": "2024-03-22", "expiryDate": "2024-05-03" },
+    { "id": 7, "type": "A-", "volume": "450ml", "donationDate": "2024-03-18", "expiryDate": "2024-04-29" }
   ],
   "resources": [
     { "id": 1, "type": "food", "donorName": "Akash", "details": "10kg Rice", "date": "2024-03-15" },
     { "id": 2, "type": "money", "donorName": "Vaghu", "details": "₹1500", "date": "2024-03-14" },
     { "id": 3, "type": "clothes", "donorName": "Aayan", "details": "5 Pairs of Trousers", "date": "2024-03-10" },
     { "id": 4, "type": "food", "donorName": "Rahul Sharma", "details": "5kg Wheat Flour", "date": "2024-03-22" },
-    { "id": 5, "type": "money", "donorName": "Sneha Gupta", "details": "₹2000", "date": "2024-03-25" }
+    { "id": 5, "type": "money", "donorName": "Sneha Gupta", "details": "₹2000", "date": "2024-03-25" },
+    { "id": 6, "type": "food", "donorName": "Amit Verma", "details": "2kg Pulses", "date": "2024-03-28" }
   ],
-  "notifications": [],
-  "users": [
-    {
-      "id": "demo-user-1",
-      "name": "Demo User",
-      "email": "demo@lifeflow.ai",
-      "password": "password123",
-      "role": "donor",
-      "bloodType": "O+"
-    }
-  ]
+  "notifications": []
 }

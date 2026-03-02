@@ -39,9 +39,8 @@ import {
   CreditCard,
   Smartphone
 } from 'lucide-react';
-import { Auth } from './components/Auth';
 import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
-import { User, Donor, Recipient, BloodBag, BloodType, ResourceDonation, ResourceType, AppNotification, NotificationSettings } from './types';
+import { Donor, Recipient, BloodBag, BloodType, ResourceDonation, ResourceType, AppNotification, NotificationSettings } from './types';
 
 // --- Constants ---
 const BLOOD_TYPES: BloodType[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -59,10 +58,10 @@ const recipientCompatibility: Record<string, string[]> = {
 
 // --- Initial Mock Data ---
 const initialDonors: Donor[] = [
-  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", lastDonation: "2024-02-15" },
-  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", lastDonation: "2024-03-01" },
-  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", lastDonation: "2024-01-20" },
-  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", lastDonation: "2024-03-10" },
+  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", email: "vaghu@example.com", lastDonation: "2024-02-15" },
+  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", email: "aayan@example.com", lastDonation: "2024-03-01" },
+  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", email: "akash@example.com", lastDonation: "2024-01-20" },
+  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", email: "shreyash@example.com", lastDonation: "2024-03-10" },
 ];
 
 const initialRecipients: Recipient[] = [
@@ -74,17 +73,22 @@ const initialBags: BloodBag[] = [
   { id: 1, type: "O+", volume: "450ml", donationDate: "2024-03-12", expiryDate: "2024-04-23" },
   { id: 2, type: "B-", volume: "450ml", donationDate: "2024-03-05", expiryDate: "2024-04-16" },
   { id: 3, type: "AB+", volume: "450ml", donationDate: "2024-01-25", expiryDate: "2024-03-08" },
+  { id: 4, type: "A+", volume: "450ml", donationDate: "2024-03-20", expiryDate: "2024-05-01" },
+  { id: 5, type: "O-", volume: "450ml", donationDate: "2024-03-15", expiryDate: "2024-04-26" },
+  { id: 6, type: "B+", volume: "450ml", donationDate: "2024-03-22", expiryDate: "2024-05-03" },
+  { id: 7, type: "A-", volume: "450ml", donationDate: "2024-03-18", expiryDate: "2024-04-29" },
 ];
 
 const initialResourceDonations: ResourceDonation[] = [
   { id: 1, type: 'food', donorName: 'Akash', details: '10kg Rice', date: '2024-03-15' },
   { id: 2, type: 'money', donorName: 'Vaghu', details: '₹1500', date: '2024-03-14' },
   { id: 3, type: 'clothes', donorName: 'Aayan', details: '5 Pairs of Trousers', date: '2024-03-10' },
+  { id: 4, type: 'food', donorName: 'Rahul Sharma', details: '5kg Wheat Flour', date: '2024-03-22' },
+  { id: 5, type: 'money', donorName: 'Sneha Gupta', details: '₹2000', date: '2024-03-25' },
+  { id: 6, type: 'food', donorName: 'Amit Verma', details: '2kg Pulses', date: '2024-03-28' },
 ];
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -95,7 +99,6 @@ const App: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [dbStatus, setDbStatus] = useState<'connected' | 'syncing' | 'error'>('connected');
   const [isSyncingExternally, setIsSyncingExternally] = useState(false);
-  const [pendingAction, setPendingAction] = useState<{ type: string; payload?: any } | null>(null);
   
   const chatRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -119,41 +122,31 @@ const App: React.FC = () => {
     };
   });
 
-  const [donors, setDonors] = useState<Donor[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_donors');
-      return saved ? JSON.parse(saved) : initialDonors;
-    } catch (e) {
-      return initialDonors;
-    }
-  });
-  
-  const [recipients, setRecipients] = useState<Recipient[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_recipients');
-      return saved ? JSON.parse(saved) : initialRecipients;
-    } catch (e) {
-      return initialRecipients;
-    }
-  });
-  
-  const [bags, setBags] = useState<BloodBag[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_bags');
-      return saved ? JSON.parse(saved) : initialBags;
-    } catch (e) {
-      return initialBags;
-    }
-  });
+  const [donors, setDonors] = useState<Donor[]>(initialDonors);
+  const [recipients, setRecipients] = useState<Recipient[]>(initialRecipients);
+  const [bags, setBags] = useState<BloodBag[]>(initialBags);
+  const [resourceDonations, setResourceDonations] = useState<ResourceDonation[]>(initialResourceDonations);
 
-  const [resourceDonations, setResourceDonations] = useState<ResourceDonation[]>(() => {
-    try {
-      const saved = localStorage.getItem('lifeflow_resources');
-      return saved ? JSON.parse(saved) : initialResourceDonations;
-    } catch (e) {
-      return initialResourceDonations;
-    }
-  });
+  // --- Initial Data Fetch ---
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/db');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.donors) setDonors(data.donors);
+          if (data.recipients) setRecipients(data.recipients);
+          if (data.bags) setBags(data.bags);
+          if (data.resources) setResourceDonations(data.resources);
+          showToast("Data synced with LifeFlow Cloud", 'info');
+        }
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        setDbStatus('error');
+      }
+    };
+    fetchData();
+  }, []);
 
   // --- Real-time Synchronizer (Cross-Tab) ---
   useEffect(() => {
@@ -182,9 +175,6 @@ const App: React.FC = () => {
           break;
         case 'lifeflow_notifications':
           setNotifications(parsedData);
-          break;
-        case 'lifeflow_session':
-          setCurrentUser(parsedData);
           break;
       }
 
@@ -238,7 +228,7 @@ const App: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
 
-  const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '' });
+  const [newDonor, setNewDonor] = useState({ name: '', age: '', bloodType: 'A+' as BloodType, contact: '', email: '' });
   const [newRequest, setNewRequest] = useState({ name: '', bloodType: '' as BloodType | '', condition: '' });
   const [newBag, setNewBag] = useState({ type: 'A+' as BloodType, volume: '450ml' });
   const [newResource, setNewResource] = useState({ type: 'food' as ResourceType, details: '', donorName: '' });
@@ -248,21 +238,31 @@ const App: React.FC = () => {
     localStorage.setItem('lifeflow_recipients', JSON.stringify(recipients));
     localStorage.setItem('lifeflow_bags', JSON.stringify(bags));
     localStorage.setItem('lifeflow_resources', JSON.stringify(resourceDonations));
-    setDbStatus('syncing');
-    const timer = setTimeout(() => setDbStatus('connected'), 600);
+    
+    // Sync to server
+    const syncToServer = async () => {
+      setDbStatus('syncing');
+      try {
+        await Promise.all([
+          fetch('/api/db/sync-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ collection: 'donors', data: donors }) }),
+          fetch('/api/db/sync-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ collection: 'recipients', data: recipients }) }),
+          fetch('/api/db/sync-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ collection: 'bags', data: bags }) }),
+          fetch('/api/db/sync-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ collection: 'resources', data: resourceDonations }) }),
+        ]);
+        setDbStatus('connected');
+      } catch (error) {
+        console.error("Sync failed:", error);
+        setDbStatus('error');
+      }
+    };
+
+    const timer = setTimeout(syncToServer, 1000);
     return () => clearTimeout(timer);
   }, [donors, recipients, bags, resourceDonations]);
 
   useEffect(() => {
     localStorage.setItem('lifeflow_notif_settings', JSON.stringify(notifSettings));
   }, [notifSettings]);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem('lifeflow_session');
-    if (savedUser) {
-      try { setCurrentUser(JSON.parse(savedUser)); } catch (e) { localStorage.removeItem('lifeflow_session'); }
-    }
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -290,25 +290,8 @@ const App: React.FC = () => {
     }
   }, [chatMessages, isTyping]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('lifeflow_session');
-    setCurrentUser(null);
-    setActiveTab('home');
-    showToast('Signed out successfully', 'info');
-  };
-
   const showToast = (message: string, type: 'success' | 'info' = 'success') => {
     setNotificationToast({ message, type });
-  };
-
-  const requireAuth = (actionType: string, callback: () => void) => {
-    if (!currentUser) {
-      setPendingAction({ type: actionType });
-      setIsAuthOpen(true);
-      showToast('Registration required to continue', 'info');
-    } else {
-      callback();
-    }
   };
 
   const findBestMatch = (bloodType: BloodType) => {
@@ -323,7 +306,8 @@ const App: React.FC = () => {
       name: donor.name,
       age: donor.age.toString(),
       bloodType: donor.bloodType,
-      contact: donor.contact
+      contact: donor.contact,
+      email: donor.email
     });
     setIsDonorModalOpen(true);
   };
@@ -343,7 +327,8 @@ const App: React.FC = () => {
         name: newDonor.name,
         age: parseInt(newDonor.age) || 18,
         bloodType: newDonor.bloodType,
-        contact: newDonor.contact
+        contact: newDonor.contact,
+        email: newDonor.email
       } : d));
       showToast(`Donor ${newDonor.name} updated successfully`);
     } else {
@@ -353,6 +338,7 @@ const App: React.FC = () => {
         age: parseInt(newDonor.age) || 18,
         bloodType: newDonor.bloodType,
         contact: newDonor.contact,
+        email: newDonor.email,
         lastDonation: new Date().toISOString().split('T')[0]
       };
       setDonors(prev => [donor, ...prev]);
@@ -362,7 +348,7 @@ const App: React.FC = () => {
     setIsDonorModalOpen(false);
     setEditingDonorId(null);
     setIsSaving(false);
-    setNewDonor({ name: '', age: '', bloodType: 'A+', contact: '' });
+    setNewDonor({ name: '', age: '', bloodType: 'A+', contact: '', email: '' });
   };
 
   const handleDeleteDonor = (id: number) => {
@@ -396,22 +382,20 @@ const App: React.FC = () => {
 
   const handleAddRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    requireAuth('matching', async () => {
-      if (!newRequest.name || !newRequest.bloodType) return;
-      setIsSaving(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const request: Recipient = {
-        id: Date.now(),
-        name: newRequest.name,
-        age: 30,
-        bloodType: newRequest.bloodType as BloodType,
-        contact: "System Generated",
-        condition: newRequest.condition || "Emergency"
-      };
-      setRecipients(prev => [request, ...prev]);
-      findBestMatch(request.bloodType);
-      setIsSaving(false);
-    });
+    if (!newRequest.name || !newRequest.bloodType) return;
+    setIsSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const request: Recipient = {
+      id: Date.now(),
+      name: newRequest.name,
+      age: 30,
+      bloodType: newRequest.bloodType as BloodType,
+      contact: "System Generated",
+      condition: newRequest.condition || "Emergency"
+    };
+    setRecipients(prev => [request, ...prev]);
+    findBestMatch(request.bloodType);
+    setIsSaving(false);
   };
 
   const handleAddBag = async (e: React.FormEvent) => {
@@ -457,7 +441,7 @@ const App: React.FC = () => {
     setIsSaving(false);
     setPaymentVerified(false);
     showToast(`Thank you for your ${donation.type} donation, ${donation.donorName}!`);
-    setNewResource({ type: 'food', details: '', donorName: currentUser?.name || '' });
+    setNewResource({ type: 'food', details: '', donorName: '' });
   };
 
   const handleDispatchBag = (id: number) => {
@@ -530,23 +514,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {isAuthOpen && (
-        <Auth 
-          onLogin={(user) => { 
-            setCurrentUser(user); 
-            setIsAuthOpen(false); 
-            showToast(`Welcome, ${user.name}!`);
-            if (pendingAction) {
-              if (pendingAction.type === 'donor') setIsDonorModalOpen(true);
-              if (pendingAction.type === 'community') setIsResourceModalOpen(true);
-              setActiveTab(pendingAction.type === 'donor' ? 'donors' : pendingAction.type === 'community' ? 'community' : 'recipients');
-              setPendingAction(null);
-            }
-          }} 
-          onClose={() => setIsAuthOpen(false)}
-        />
-      )}
-
       {notificationToast && (
         <div className="fixed top-20 right-4 z-[100] animate-fade-in">
           <div className={`px-6 py-4 rounded-2xl shadow-2xl border flex items-center space-x-3 ${
@@ -624,25 +591,6 @@ const App: React.FC = () => {
               <MessageSquare className="w-6 h-6" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-600 rounded-full border-2 border-white"></span>
             </button>
-            
-            {currentUser ? (
-              <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
-                <div className="hidden sm:block text-right">
-                  <p className="text-sm font-bold text-slate-800 leading-none">{currentUser.name}</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{currentUser.role} • {currentUser.bloodType}</p>
-                </div>
-                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full">
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
-                <button onClick={() => setIsAuthOpen(true)} className="bg-red-600 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-100 transition-all flex items-center space-x-2">
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>Login / Join</span>
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </nav>
@@ -661,12 +609,10 @@ const App: React.FC = () => {
               Experience real-time donor matching for <strong>Vaghu, Aayan, Akash, and Shreyash</strong>. Mandatory registration ensures safety and reliable matching.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <button onClick={() => requireAuth('donor', () => { setActiveTab('donors'); setIsDonorModalOpen(true); })} className="px-10 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center space-x-2">
-                {!currentUser && <Lock className="w-4 h-4" />}
+              <button onClick={() => { setActiveTab('donors'); setIsDonorModalOpen(true); }} className="px-10 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center space-x-2">
                 <span>Become a Donor</span>
               </button>
-              <button onClick={() => requireAuth('community', () => { setActiveTab('community'); setIsResourceModalOpen(true); })} className="px-10 py-4 bg-white border border-slate-200 text-slate-800 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center space-x-2">
-                {!currentUser && <Lock className="w-4 h-4 text-slate-400" />}
+              <button onClick={() => { setActiveTab('community'); setIsResourceModalOpen(true); }} className="px-10 py-4 bg-white border border-slate-200 text-slate-800 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center space-x-2">
                 <span>Share Resources</span>
               </button>
             </div>
@@ -693,8 +639,7 @@ const App: React.FC = () => {
           <div className="space-y-8 animate-fade-in">
             <div className="flex justify-between items-center border-b border-slate-200 pb-4">
               <h2 className="text-2xl font-bold text-slate-800">Donor Directory</h2>
-              <button onClick={() => requireAuth('donor', () => setIsDonorModalOpen(true))} className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 flex items-center space-x-2">
-                {!currentUser && <Lock className="w-4 h-4" />}
+              <button onClick={() => setIsDonorModalOpen(true)} className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 flex items-center space-x-2">
                 <Plus className="w-4 h-4" />
                 <span>Add Donor</span>
               </button>
@@ -730,11 +675,9 @@ const App: React.FC = () => {
                           <button onClick={() => handleOpenEditModal(d)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors bg-slate-50 rounded-full">
                             <Edit className="w-4 h-4" />
                           </button>
-                          {currentUser?.role === 'admin' && (
-                            <button onClick={() => handleDeleteDonor(d.id)} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button onClick={() => handleDeleteDonor(d.id)} className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-full">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -752,8 +695,7 @@ const App: React.FC = () => {
                 <h2 className="text-2xl font-bold text-slate-800">Community Hub</h2>
                 <p className="text-slate-500 text-sm">Share resources. (Identity Verified)</p>
               </div>
-              <button onClick={() => requireAuth('community', () => { setNewResource({ ...newResource, donorName: currentUser?.name || '' }); setIsResourceModalOpen(true); })} className="bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-red-700 flex items-center space-x-2 shadow-lg shadow-red-100">
-                {!currentUser && <Lock className="w-4 h-4" />}
+              <button onClick={() => { setIsResourceModalOpen(true); }} className="bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-red-700 flex items-center space-x-2 shadow-lg shadow-red-100">
                 <Plus className="w-4 h-4" />
                 <span>Share Resources</span>
               </button>
@@ -792,7 +734,7 @@ const App: React.FC = () => {
                     <div className="p-3 bg-slate-800 rounded-xl"><ShieldCheck className="w-6 h-6 text-green-500" /></div>
                     <div className="text-xs text-slate-400">Verified by<br/><span className="text-white font-bold">SafeLife Network</span></div>
                 </div>
-                <button onClick={() => requireAuth('community', () => { setNewResource({...newResource, type: 'money'}); setIsResourceModalOpen(true); })} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all">Start Donation</button>
+                <button onClick={() => { setNewResource({...newResource, type: 'money'}); setIsResourceModalOpen(true); }} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all">Start Donation</button>
               </div>
             </div>
           </div>
@@ -808,31 +750,23 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <h3 className="text-lg font-bold mb-6 text-slate-800">Match Request</h3>
-                {!currentUser ? (
-                  <div className="text-center py-8">
-                    <Lock className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                    <p className="text-slate-500 text-sm mb-6">Login to start matching patients with donors.</p>
-                    <button onClick={() => setIsAuthOpen(true)} className="w-full py-3 bg-red-600 text-white font-bold rounded-xl">Sign In</button>
+                <form onSubmit={handleAddRequest} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Patient Name</label>
+                    <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="Enter patient name" value={newRequest.name} onChange={e => setNewRequest({...newRequest, name: e.target.value})} />
                   </div>
-                ) : (
-                  <form onSubmit={handleAddRequest} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Patient Name</label>
-                      <input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="Enter patient name" value={newRequest.name} onChange={e => setNewRequest({...newRequest, name: e.target.value})} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Required Type</label>
-                      <select required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newRequest.bloodType} onChange={e => { setNewRequest({...newRequest, bloodType: e.target.value as BloodType}); findBestMatch(e.target.value as BloodType); }}>
-                        <option value="">Select Blood Group</option>
-                        {BLOOD_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                      </select>
-                    </div>
-                    <button disabled={isSaving} type="submit" className="w-full py-3.5 bg-slate-900 text-white font-bold rounded-xl flex items-center justify-center space-x-2">
-                      {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                      <span>{isSaving ? 'Scanning...' : 'Start Matching'}</span>
-                    </button>
-                  </form>
-                )}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Required Type</label>
+                    <select required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newRequest.bloodType} onChange={e => { setNewRequest({...newRequest, bloodType: e.target.value as BloodType}); findBestMatch(e.target.value as BloodType); }}>
+                      <option value="">Select Blood Group</option>
+                      {BLOOD_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                  </div>
+                  <button disabled={isSaving} type="submit" className="w-full py-3.5 bg-slate-900 text-white font-bold rounded-xl flex items-center justify-center space-x-2">
+                    {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    <span>{isSaving ? 'Scanning...' : 'Start Matching'}</span>
+                  </button>
+                </form>
               </div>
               <div className="lg:col-span-2 space-y-6">
                 {matchResult ? (
@@ -858,11 +792,9 @@ const App: React.FC = () => {
           <div className="space-y-8 animate-fade-in">
              <div className="flex justify-between items-center border-b border-slate-200 pb-4">
               <div><h2 className="text-2xl font-bold text-slate-800">Inventory Management</h2><p className="text-slate-500 text-sm">Real-time blood unit tracking.</p></div>
-              {currentUser?.role === 'admin' && (
-                <button onClick={() => setIsBagModalOpen(true)} className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center space-x-2">
-                  <Plus className="w-4 h-4" /><span>Add Unit</span>
-                </button>
-              )}
+              <button onClick={() => setIsBagModalOpen(true)} className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center space-x-2">
+                <Plus className="w-4 h-4" /><span>Add Unit</span>
+              </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {bags.map(bag => (
@@ -875,7 +807,7 @@ const App: React.FC = () => {
                     </div>
                     <div className="mt-6 pt-4 border-t border-slate-100 flex gap-2">
                       <button onClick={() => showToast(`Report for unit #${bag.id}`, 'info')} className="flex-1 text-[9px] font-black uppercase tracking-widest bg-slate-50 py-2 rounded-lg">History</button>
-                      {currentUser?.role === 'admin' && <button onClick={() => handleDispatchBag(bag.id)} className="flex-1 text-[9px] font-black uppercase tracking-widest bg-red-600 text-white py-2 rounded-lg">Dispatch</button>}
+                      <button onClick={() => handleDispatchBag(bag.id)} className="flex-1 text-[9px] font-black uppercase tracking-widest bg-red-600 text-white py-2 rounded-lg">Dispatch</button>
                     </div>
                   </div>
                 </div>
@@ -914,6 +846,7 @@ const App: React.FC = () => {
             </div>
             <form onSubmit={handleSaveDonor} className="p-6 space-y-4">
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Full Name</label><input type="text" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.name} onChange={e => setNewDonor({...newDonor, name: e.target.value})} disabled={isSaving} /></div>
+              <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Email Address</label><input type="email" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.email} onChange={e => setNewDonor({...newDonor, email: e.target.value})} disabled={isSaving} /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Age</label><input type="number" required className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.age} onChange={e => setNewDonor({...newDonor, age: e.target.value})} disabled={isSaving} /></div>
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Type</label><select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newDonor.bloodType} onChange={e => setNewDonor({...newDonor, bloodType: e.target.value as BloodType})} disabled={isSaving}>{BLOOD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
@@ -1026,6 +959,40 @@ const App: React.FC = () => {
                   {isSaving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Gift className="w-5 h-5 group-hover:scale-110 transition-transform" />}
                   <span className="uppercase text-xs tracking-[0.2em]">{isSaving ? 'Processing Identity...' : 'Confirm Donation'}</span>
                 </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isBagModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl animate-fade-in overflow-hidden border border-slate-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+               <h3 className="font-bold text-slate-800 text-lg">Add Blood Unit</h3>
+              <button onClick={() => setIsBagModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X /></button>
+            </div>
+            <form onSubmit={handleAddBag} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Blood Group</label>
+                <select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newBag.type} onChange={e => setNewBag({...newBag, type: e.target.value as BloodType})} disabled={isSaving}>
+                  {BLOOD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Volume</label>
+                <select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl" value={newBag.volume} onChange={e => setNewBag({...newBag, volume: e.target.value})} disabled={isSaving}>
+                  <option value="250ml">250ml</option>
+                  <option value="350ml">350ml</option>
+                  <option value="450ml">450ml</option>
+                </select>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Auto-calculated Expiry</p>
+                <p className="text-xs text-blue-800">This unit will expire in 42 days from today.</p>
+              </div>
+              <button type="submit" disabled={isSaving} className="w-full py-3.5 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-slate-800 transition-all">
+                {isSaving ? 'Processing...' : 'Add to Inventory'}
+              </button>
             </form>
           </div>
         </div>
