@@ -715,11 +715,33 @@ const App: React.FC = () => {
             <div className="flex flex-col">
                <span className="font-bold text-lg tracking-tight text-slate-800 leading-none">LifeFlow AI</span>
                <div className="flex items-center space-x-1 mt-0.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${isSyncingExternally ? 'bg-blue-500 animate-pulse' : systemHealth === 'optimal' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}></div>
-                  <span className={`text-[8px] font-bold uppercase tracking-tighter ${isSyncingExternally ? 'text-blue-500' : systemHealth === 'optimal' ? 'text-slate-400' : 'text-amber-500'}`}>
-                    {isSyncingExternally ? 'Syncing...' : systemHealth === 'optimal' ? 'Atlas Ready' : 'Degraded Mode'}
+                  <div className={`w-1.5 h-1.5 rounded-full ${isSyncingExternally ? 'bg-blue-500 animate-pulse' : systemHealth === 'optimal' ? 'bg-green-500' : systemHealth === 'degraded' ? 'bg-amber-500 animate-pulse' : 'bg-red-500 animate-pulse'}`}></div>
+                  <span className={`text-[8px] font-bold uppercase tracking-tighter ${isSyncingExternally ? 'text-blue-500' : systemHealth === 'optimal' ? 'text-slate-400' : systemHealth === 'degraded' ? 'text-amber-500' : 'text-red-500'}`}>
+                    {isSyncingExternally ? 'Syncing...' : systemHealth === 'optimal' ? 'Atlas Ready' : systemHealth === 'degraded' ? 'Degraded Mode' : 'Cluster Offline'}
                   </span>
                </div>
+            </div>
+          </div>
+
+          <div className="hidden lg:flex items-center space-x-4 px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${systemHealth === 'optimal' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : systemHealth === 'degraded' ? 'bg-amber-500 animate-pulse' : 'bg-red-500 animate-pulse'}`}></div>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">AI Cluster</span>
+                <span className={`text-[10px] font-bold capitalize leading-none mt-0.5 ${systemHealth === 'optimal' ? 'text-slate-600' : systemHealth === 'degraded' ? 'text-amber-600' : 'text-red-600'}`}>
+                  {systemHealth}
+                </span>
+              </div>
+            </div>
+            <div className="w-px h-6 bg-slate-200"></div>
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${dbStatus === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : dbStatus === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500 animate-pulse'}`}></div>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Database</span>
+                <span className={`text-[10px] font-bold capitalize leading-none mt-0.5 ${dbStatus === 'connected' ? 'text-slate-600' : dbStatus === 'syncing' ? 'text-blue-600' : 'text-red-600'}`}>
+                  {dbStatus === 'connected' ? 'Online' : dbStatus === 'syncing' ? 'Syncing' : 'Offline'}
+                </span>
+              </div>
             </div>
           </div>
 
