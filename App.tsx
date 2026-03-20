@@ -41,8 +41,22 @@ import {
   Smartphone,
   Mail,
   AlertCircle,
-  LayoutDashboard
+  LayoutDashboard,
+  BarChart3,
+  PieChart
 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  Cell, 
+  PieChart as RePieChart, 
+  Pie 
+} from 'recharts';
 import { Auth } from './components/Auth';
 import { ContactUs } from './components/ContactUs';
 import { getAIChatResponse, LOCAL_FAQ } from './services/geminiService';
@@ -1054,101 +1068,300 @@ const App: React.FC = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">Welcome back, {currentUser.name}!</h2>
-                    <p className="text-slate-500 text-sm mt-1">Here's what's happening with your LifeFlow profile today.</p>
+                    <p className="text-slate-500 text-sm mt-1">
+                      {currentUser.role === 'admin' ? "Global Network Overview & Administrative Control" : "Here's what's happening with your LifeFlow profile today."}
+                    </p>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm flex items-center space-x-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profile Verified</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {currentUser.role === 'admin' ? 'System Online' : 'Profile Verified'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Droplet className="w-24 h-24 text-red-600" /></div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Blood Group</p>
-                    <p className="text-5xl font-black text-red-600">{currentUser.bloodType || 'N/A'}</p>
-                    <p className="text-xs text-slate-500 mt-4 font-bold uppercase tracking-tighter">Universal Compatibility: {currentUser.bloodType === 'O-' ? 'High' : 'Standard'}</p>
-                  </div>
+                {currentUser.role === 'admin' ? (
+                  <div className="space-y-8">
+                    {/* Admin Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Users className="w-16 h-16 text-blue-600" /></div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Donors</p>
+                        <p className="text-4xl font-black text-slate-900">{donors.length}</p>
+                        <div className="mt-4 flex items-center text-xs text-green-600 font-bold">
+                          <TrendingUp className="w-3 h-3 mr-1" />
+                          <span>+12% this month</span>
+                        </div>
+                      </div>
 
-                  <div className="bg-slate-900 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-6 opacity-10"><ShieldCheck className="w-24 h-24" /></div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Account Role</p>
-                    <p className="text-4xl font-black capitalize">{currentUser.role}</p>
-                    <div className="mt-6 flex items-center space-x-2 text-xs text-slate-400">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Member since March 2024</span>
+                      <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Droplet className="w-16 h-16 text-red-600" /></div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Inventory Units</p>
+                        <p className="text-4xl font-black text-red-600">{bags.length}</p>
+                        <div className="mt-4 flex items-center text-xs text-slate-500 font-bold">
+                          <span>{bags.filter(b => {
+                            const expiry = new Date(b.expiryDate);
+                            const today = new Date();
+                            const diff = expiry.getTime() - today.getTime();
+                            return diff < 7 * 24 * 60 * 60 * 1000;
+                          }).length} units near expiry</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Activity className="w-16 h-16 text-emerald-600" /></div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Active Recipients</p>
+                        <p className="text-4xl font-black text-slate-900">{recipients.length}</p>
+                        <div className="mt-4 flex items-center text-xs text-blue-600 font-bold">
+                          <span>4 pending matches</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900 p-6 rounded-[2rem] text-white shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-6 opacity-10"><ShieldCheck className="w-16 h-16" /></div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">System Health</p>
+                        <p className="text-4xl font-black capitalize">{systemHealth}</p>
+                        <div className="mt-4 flex items-center text-xs text-slate-400 font-bold">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                          <span>All clusters active</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between">
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Quick Actions</p>
-                      <div className="space-y-2">
-                        <button onClick={() => setActiveTab('donors')} className="w-full py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center space-x-2">
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>New Donation</span>
-                        </button>
-                        <button onClick={() => setActiveTab('recipients')} className="w-full py-2.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center space-x-2">
-                          <Search className="w-3.5 h-3.5" />
-                          <span>Find Match</span>
-                        </button>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Inventory Distribution Chart */}
+                      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-8">
+                          <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center space-x-2">
+                            <BarChart3 className="w-4 h-4 text-red-600" />
+                            <span>Inventory Distribution</span>
+                          </h3>
+                          <button onClick={() => setActiveTab('bloodbags')} className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:underline">Manage</button>
+                        </div>
+                        <div className="h-[300px] w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={BLOOD_TYPES.map(type => ({
+                              name: type,
+                              value: bags.filter(b => b.type === type).length
+                            }))}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 900, fill: '#94a3b8'}} />
+                              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 900, fill: '#94a3b8'}} />
+                              <Tooltip 
+                                cursor={{fill: '#f8fafc'}}
+                                contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold'}}
+                              />
+                              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                {BLOOD_TYPES.map((_, index) => (
+                                  <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#ef4444' : '#f87171'} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* Critical Alerts */}
+                      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                        <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                          <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center space-x-2">
+                            <AlertCircle className="w-4 h-4 text-red-600" />
+                            <span>Critical Alerts</span>
+                          </h3>
+                          <span className="px-2 py-1 bg-red-100 text-red-600 text-[9px] font-black rounded-full uppercase tracking-widest">
+                            {notifications.filter(n => n.type === 'inventory' || n.type === 'system').length} Active
+                          </span>
+                        </div>
+                        <div className="divide-y divide-slate-100 overflow-y-auto max-h-[300px]">
+                          {notifications.filter(n => n.type === 'inventory' || n.type === 'system' || n.type === 'match').slice(0, 8).map(n => (
+                            <div key={n.id} className="p-5 flex items-start space-x-4 hover:bg-red-50/30 transition-colors">
+                              <div className={`p-2 rounded-xl ${n.type === 'inventory' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                                {n.type === 'inventory' ? <Droplet className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex justify-between items-start">
+                                  <p className="text-sm font-bold text-slate-800">{n.title}</p>
+                                  <p className="text-[9px] text-slate-400 font-black uppercase">{n.timestamp}</p>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">{n.message}</p>
+                              </div>
+                            </div>
+                          ))}
+                          {notifications.length === 0 && (
+                            <div className="p-12 text-center text-slate-400 text-xs font-bold uppercase">No critical alerts</div>
+                          )}
+                        </div>
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 mt-auto">
+                          <button onClick={() => setIsNotifOpen(true)} className="w-full py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100 transition-all">
+                            Open Notification Center
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      {/* Recent Donations */}
+                      <div className="lg:col-span-2 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                          <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center space-x-2">
+                            <History className="w-4 h-4 text-red-600" />
+                            <span>Recent Network Donations</span>
+                          </h3>
+                          <button onClick={() => setActiveTab('donors')} className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:underline">View All</button>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left">
+                            <thead>
+                              <tr className="bg-slate-50/50">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Donor</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Blood Type</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Location</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {[...donors].sort((a, b) => new Date(b.lastDonation).getTime() - new Date(a.lastDonation).getTime()).slice(0, 5).map(donor => (
+                                <tr key={donor.id} className="hover:bg-slate-50 transition-colors">
+                                  <td className="px-6 py-4">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-600">
+                                        {donor.name.charAt(0)}
+                                      </div>
+                                      <span className="text-sm font-bold text-slate-800">{donor.name}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <span className="px-2 py-1 bg-red-50 text-red-600 text-[10px] font-black rounded-lg">{donor.bloodType}</span>
+                                  </td>
+                                  <td className="px-6 py-4 text-xs text-slate-500 font-medium">{donor.lastDonation}</td>
+                                  <td className="px-6 py-4 text-xs text-slate-500 font-medium">{donor.location || 'N/A'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Quick Admin Actions */}
+                      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col">
+                        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center space-x-2">
+                          <Settings className="w-4 h-4 text-red-600" />
+                          <span>Admin Controls</span>
+                        </h3>
+                        <div className="space-y-3">
+                          <button onClick={() => setIsBagModalOpen(true)} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-red-100 hover:bg-red-700 transition-all flex items-center justify-center space-x-2">
+                            <Plus className="w-4 h-4" />
+                            <span>Add Blood Unit</span>
+                          </button>
+                          <button onClick={() => setActiveTab('recipients')} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-slate-200 hover:bg-black transition-all flex items-center justify-center space-x-2">
+                            <Activity className="w-4 h-4" />
+                            <span>Match Requests</span>
+                          </button>
+                          <button onClick={handleReportIssue} className="w-full py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center space-x-2">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span>System Audit</span>
+                          </button>
+                        </div>
+                        <div className="mt-auto pt-8">
+                          <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Backup Status</p>
+                            <p className="text-xs text-blue-800 font-bold">Last sync: 2 mins ago</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Droplet className="w-24 h-24 text-red-600" /></div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Blood Group</p>
+                        <p className="text-5xl font-black text-red-600">{currentUser.bloodType || 'N/A'}</p>
+                        <p className="text-xs text-slate-500 mt-4 font-bold uppercase tracking-tighter">Universal Compatibility: {currentUser.bloodType === 'O-' ? 'High' : 'Standard'}</p>
+                      </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                      <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center space-x-2">
-                        <History className="w-4 h-4 text-red-600" />
-                        <span>Recent Activity</span>
-                      </h3>
-                      <button onClick={() => setIsNotifOpen(true)} className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:underline">View All</button>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                      {notifications.slice(0, 5).map(n => (
-                        <div key={n.id} className="p-5 flex items-start space-x-4 hover:bg-slate-50 transition-colors">
-                          <div className={`p-2 rounded-xl ${n.type === 'match' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
-                            {n.type === 'match' ? <Users className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-slate-800">{n.title}</p>
-                            <p className="text-xs text-slate-500 mt-1 line-clamp-1">{n.message}</p>
-                            <p className="text-[9px] text-slate-300 font-black uppercase mt-2">{n.timestamp}</p>
-                          </div>
+                      <div className="bg-slate-900 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-6 opacity-10"><ShieldCheck className="w-24 h-24" /></div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Account Role</p>
+                        <p className="text-4xl font-black capitalize">{currentUser.role}</p>
+                        <div className="mt-6 flex items-center space-x-2 text-xs text-slate-400">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Member since March 2024</span>
                         </div>
-                      ))}
-                      {notifications.length === 0 && (
-                        <div className="p-12 text-center text-slate-400 text-xs font-bold uppercase">No recent activity</div>
-                      )}
-                    </div>
-                  </div>
+                      </div>
 
-                  <div className="space-y-6">
-                    <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
-                      <h3 className="text-lg font-black text-slate-800 mb-6">Eligibility Status</h3>
-                      <div className="flex items-center space-x-6">
-                        <div className="w-20 h-20 rounded-full border-4 border-green-500 flex items-center justify-center">
-                          <span className="text-xl font-black text-green-600">OK</span>
-                        </div>
+                      <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-between">
                         <div>
-                          <p className="font-bold text-slate-800">You are eligible to donate!</p>
-                          <p className="text-sm text-slate-500 mt-1">Your last donation was over 3 months ago. You can contribute to the network today.</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Quick Actions</p>
+                          <div className="space-y-2">
+                            <button onClick={() => setActiveTab('donors')} className="w-full py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center space-x-2">
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>New Donation</span>
+                            </button>
+                            <button onClick={() => setActiveTab('recipients')} className="w-full py-2.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center space-x-2">
+                              <Search className="w-3.5 h-3.5" />
+                              <span>Find Match</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-red-600 to-red-700 p-8 rounded-[2rem] text-white shadow-xl shadow-red-100 relative overflow-hidden">
-                      <div className="absolute -bottom-4 -right-4 opacity-10 rotate-12"><Heart className="w-32 h-32 fill-current" /></div>
-                      <h3 className="text-xl font-black mb-2">Emergency Alert</h3>
-                      <p className="text-red-100 text-sm mb-6 leading-relaxed">There is a critical shortage of {currentUser.bloodType || 'your'} blood type in your local cluster. Your contribution could save a life in the next 24 hours.</p>
-                      <button onClick={() => setActiveTab('donors')} className="px-6 py-3 bg-white text-red-600 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-red-50 transition-all">Donate Now</button>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                          <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center space-x-2">
+                            <History className="w-4 h-4 text-red-600" />
+                            <span>Recent Activity</span>
+                          </h3>
+                          <button onClick={() => setIsNotifOpen(true)} className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:underline">View All</button>
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                          {notifications.slice(0, 5).map(n => (
+                            <div key={n.id} className="p-5 flex items-start space-x-4 hover:bg-slate-50 transition-colors">
+                              <div className={`p-2 rounded-xl ${n.type === 'match' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                                {n.type === 'match' ? <Users className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-800">{n.title}</p>
+                                <p className="text-xs text-slate-500 mt-1 line-clamp-1">{n.message}</p>
+                                <p className="text-[9px] text-slate-300 font-black uppercase mt-2">{n.timestamp}</p>
+                              </div>
+                            </div>
+                          ))}
+                          {notifications.length === 0 && (
+                            <div className="p-12 text-center text-slate-400 text-xs font-bold uppercase">No recent activity</div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
+                          <h3 className="text-lg font-black text-slate-800 mb-6">Eligibility Status</h3>
+                          <div className="flex items-center space-x-6">
+                            <div className="w-20 h-20 rounded-full border-4 border-green-500 flex items-center justify-center">
+                              <span className="text-xl font-black text-green-600">OK</span>
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-800">You are eligible to donate!</p>
+                              <p className="text-sm text-slate-500 mt-1">Your last donation was over 3 months ago. You can contribute to the network today.</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-red-600 to-red-700 p-8 rounded-[2rem] text-white shadow-xl shadow-red-100 relative overflow-hidden">
+                          <div className="absolute -bottom-4 -right-4 opacity-10 rotate-12"><Heart className="w-32 h-32 fill-current" /></div>
+                          <h3 className="text-xl font-black mb-2">Emergency Alert</h3>
+                          <p className="text-red-100 text-sm mb-6 leading-relaxed">There is a critical shortage of {currentUser.bloodType || 'your'} blood type in your local cluster. Your contribution could save a life in the next 24 hours.</p>
+                          <button onClick={() => setActiveTab('donors')} className="px-6 py-3 bg-white text-red-600 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-red-50 transition-all">Donate Now</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
