@@ -86,8 +86,8 @@ export const LOCAL_FAQ = [
     response: "Timing: The entire process takes about 1 hour. The actual blood draw only takes 8-10 minutes. Platelet donation takes longer (90-120 minutes) as blood is processed through a machine."
   },
   {
-    keywords: ["vaghu", "aayan", "akash", "shreyash", "team", "members"],
-    response: "The LifeFlow AI cluster was developed for the core team: Vaghu (O+), Aayan (B-), Akash (AB+), and Shreyash (O+). They represent our active donor database!"
+    keywords: ["vaishnavi", "tanvi", "savani", "team", "members"],
+    response: "The LifeFlow AI cluster was developed for the core team: Vaishnavi (O+), Tanvi (B-), Savani (AB+), and Tanvi (O+). They represent our active donor database!"
   },
   {
     keywords: ["hi", "hello", "hey", "help", "who are you", "bot", "assistant"],
@@ -129,7 +129,7 @@ export const getAIChatResponse = async (
 
   // 2. Check for internet connectivity
   if (!navigator.onLine) {
-    const offlineMsg = "I'm currently offline. I can still answer questions about eligibility, donation rules, blood types, medications, and team info (Vaghu, Aayan, Akash, Shreyash). How can I help?";
+    const offlineMsg = "I'm currently offline. I can still answer questions about eligibility, donation rules, blood types, medications, and team info (Vaishnavi, Tanvi, Savani, Tanvi). How can I help?";
     if (onChunk) onChunk(offlineMsg);
     return offlineMsg;
   }
@@ -147,7 +147,7 @@ export const getAIChatResponse = async (
         Knowledge: Whole blood(56d), Platelets(7d), Power Red(112d). 
         Hb min: 12.5(F)/13.0(M). 
         Deferrals: Tattoos(3m), Malaria travel(3m). 
-        Team: Vaghu(O+), Aayan(B-), Akash(AB+), Shreyash(O+).
+        Team: Vaishnavi(O+), Tanvi(B-), Savani(AB+), Tanvi(O+).
         Contact: blooddonationlifeflowai@gmail.com
         Keep responses professional, encouraging, and medical-grounded. Conciseness is key for speed.`,
         temperature: 0.5,

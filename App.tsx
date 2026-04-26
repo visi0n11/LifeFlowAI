@@ -96,9 +96,9 @@ const initialBags: BloodBag[] = [
 ];
 
 const initialResourceDonations: ResourceDonation[] = [
-  { id: 1, type: 'food', donorName: 'Akash', details: '10kg Rice', date: '2024-03-15' },
-  { id: 2, type: 'money', donorName: 'Vaghu', details: '₹1500', date: '2024-03-14' },
-  { id: 3, type: 'clothes', donorName: 'Aayan', details: '5 Pairs of Trousers', date: '2024-03-10' },
+  { id: 1, type: 'food', donorName: 'Savani', details: '10kg Rice', date: '2024-03-15' },
+  { id: 2, type: 'money', donorName: 'Vaishnavi', details: '₹1500', date: '2024-03-14' },
+  { id: 3, type: 'clothes', donorName: 'Tanvi', details: '5 Pairs of Trousers', date: '2024-03-10' },
 ];
 
 const App: React.FC = () => {
@@ -715,11 +715,33 @@ const App: React.FC = () => {
             <div className="flex flex-col">
                <span className="font-bold text-lg tracking-tight text-slate-800 leading-none">LifeFlow AI</span>
                <div className="flex items-center space-x-1 mt-0.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${isSyncingExternally ? 'bg-blue-500 animate-pulse' : systemHealth === 'optimal' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}></div>
-                  <span className={`text-[8px] font-bold uppercase tracking-tighter ${isSyncingExternally ? 'text-blue-500' : systemHealth === 'optimal' ? 'text-slate-400' : 'text-amber-500'}`}>
-                    {isSyncingExternally ? 'Syncing...' : systemHealth === 'optimal' ? 'Atlas Ready' : 'Degraded Mode'}
+                  <div className={`w-1.5 h-1.5 rounded-full ${isSyncingExternally ? 'bg-blue-500 animate-pulse' : systemHealth === 'optimal' ? 'bg-green-500' : systemHealth === 'degraded' ? 'bg-amber-500 animate-pulse' : 'bg-red-500 animate-pulse'}`}></div>
+                  <span className={`text-[8px] font-bold uppercase tracking-tighter ${isSyncingExternally ? 'text-blue-500' : systemHealth === 'optimal' ? 'text-slate-400' : systemHealth === 'degraded' ? 'text-amber-500' : 'text-red-500'}`}>
+                    {isSyncingExternally ? 'Syncing...' : systemHealth === 'optimal' ? 'Atlas Ready' : systemHealth === 'degraded' ? 'Degraded Mode' : 'Cluster Offline'}
                   </span>
                </div>
+            </div>
+          </div>
+
+          <div className="hidden lg:flex items-center space-x-4 px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${systemHealth === 'optimal' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : systemHealth === 'degraded' ? 'bg-amber-500 animate-pulse' : 'bg-red-500 animate-pulse'}`}></div>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">AI Cluster</span>
+                <span className={`text-[10px] font-bold capitalize leading-none mt-0.5 ${systemHealth === 'optimal' ? 'text-slate-600' : systemHealth === 'degraded' ? 'text-amber-600' : 'text-red-600'}`}>
+                  {systemHealth}
+                </span>
+              </div>
+            </div>
+            <div className="w-px h-6 bg-slate-200"></div>
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${dbStatus === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : dbStatus === 'syncing' ? 'bg-blue-500 animate-pulse' : 'bg-red-500 animate-pulse'}`}></div>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Database</span>
+                <span className={`text-[10px] font-bold capitalize leading-none mt-0.5 ${dbStatus === 'connected' ? 'text-slate-600' : dbStatus === 'syncing' ? 'text-blue-600' : 'text-red-600'}`}>
+                  {dbStatus === 'connected' ? 'Online' : dbStatus === 'syncing' ? 'Syncing' : 'Offline'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -806,7 +828,7 @@ const App: React.FC = () => {
               Connect. Donate.<br /><span className="text-red-600 underline decoration-red-200 underline-offset-8">Save Lives.</span>
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Experience real-time donor matching for <strong>Vaghu, Aayan, Akash, and Shreyash</strong>. Mandatory registration ensures safety and reliable matching.
+              Experience real-time donor matching for <strong>Vaishnavi, Tanvi, Savani, and Tanvi</strong>. Mandatory registration ensures safety and reliable matching.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <button onClick={() => requireAuth('donor', () => { setActiveTab('donors'); setIsDonorModalOpen(true); })} className="px-10 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center space-x-2">
