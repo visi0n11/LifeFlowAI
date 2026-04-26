@@ -25,10 +25,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onClose }) => {
     if (isLogin) {
       // Mock login logic
       const mockUsers: Record<string, User> = {
-        'vaghu@example.com': { id: '1', name: 'Vaghu', email: 'vaghu@example.com', role: 'admin', bloodType: 'O+' },
-        'aayan@example.com': { id: '2', name: 'Aayan', email: 'aayan@example.com', role: 'donor', bloodType: 'B-' },
-        'akash@example.com': { id: '3', name: 'Akash', email: 'akash@example.com', role: 'donor', bloodType: 'AB+' },
-        'shreyash@example.com': { id: '4', name: 'Shreyash', email: 'shreyash@example.com', role: 'donor', bloodType: 'O+' },
+        'vaishnavi@example.com': { id: '1', name: 'Vaishnavi', email: 'vaishnavi@example.com', role: 'admin', bloodType: 'O+' },
+        'tanvi@example.com': { id: '2', name: 'Tanvi', email: 'tanvi@example.com', role: 'donor', bloodType: 'B-' },
+        'savani@example.com': { id: '3', name: 'Savani', email: 'savani@example.com', role: 'donor', bloodType: 'AB+' },
+        'tanvi2@example.com': { id: '4', name: 'Tanvi', email: 'tanvi2@example.com', role: 'donor', bloodType: 'O+' },
       };
 
       const user = mockUsers[email.toLowerCase()];

@@ -78,10 +78,10 @@ const recipientCompatibility: Record<string, string[]> = {
 
 // --- Initial Mock Data ---
 const initialDonors: Donor[] = [
-  { id: 1, name: "Vaghu", age: 24, bloodType: "O+", contact: "9870000101", email: "vaghu@example.com", lastDonation: "2024-02-15", location: "Mumbai" },
-  { id: 2, name: "Aayan", age: 22, bloodType: "B-", contact: "9870000102", email: "aayan@example.com", lastDonation: "2024-03-01", location: "Pune" },
-  { id: 3, name: "Akash", age: 25, bloodType: "AB+", contact: "9870000103", email: "akash@example.com", lastDonation: "2024-01-20", location: "Bangalore" },
-  { id: 4, name: "Shreyash", age: 23, bloodType: "O+", contact: "9870000104", email: "shreyash@example.com", lastDonation: "2024-03-10", location: "Delhi" },
+  { id: 1, name: "Vaishnavi", age: 24, bloodType: "O+", contact: "9870000101", email: "vaishnavi@example.com", lastDonation: "2024-02-15", location: "Mumbai" },
+  { id: 2, name: "Tanvi", age: 22, bloodType: "B-", contact: "9870000102", email: "tanvi@example.com", lastDonation: "2024-03-01", location: "Pune" },
+  { id: 3, name: "Savani", age: 25, bloodType: "AB+", contact: "9870000103", email: "savani@example.com", lastDonation: "2024-01-20", location: "Bangalore" },
+  { id: 4, name: "Tanvi", age: 23, bloodType: "O+", contact: "9870000104", email: "tanvi2@example.com", lastDonation: "2024-03-10", location: "Delhi" },
 ];
 
 const initialRecipients: Recipient[] = [
@@ -1579,7 +1579,7 @@ const App: React.FC = () => {
             <div className="flex items-center space-x-4 bg-slate-800/40 px-3 py-1.5 rounded-full border border-slate-800"><div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div><span className="text-[9px] font-black uppercase text-slate-300">Identity Secure</span></div>
           </div>
           <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-slate-600">
-            <div>&copy; 2025 LifeFlow AI • Team Vaghu, Aayan, Akash, Shreyash</div>
+            <div>&copy; 2025 LifeFlow AI • Team Vaishnavi, Tanvi, Savani, Tanvi</div>
             <div className="flex items-center space-x-6">
               <button onClick={() => setActiveTab('contact')} className="flex items-center space-x-1 hover:text-red-500 transition-colors">
                 <Mail className="w-3 h-3" />
